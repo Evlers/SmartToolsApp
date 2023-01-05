@@ -7,28 +7,32 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		991C631729501426002098DE /* SelectDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 991C631629501426002098DE /* SelectDevice.m */; };
 		99442909294FFA320086ACA0 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 99442908294FFA320086ACA0 /* AppDelegate.m */; };
-		9944290C294FFA320086ACA0 /* SceneDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 9944290B294FFA320086ACA0 /* SceneDelegate.m */; };
-		9944290F294FFA320086ACA0 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 9944290E294FFA320086ACA0 /* ViewController.m */; };
 		99442912294FFA320086ACA0 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 99442910294FFA320086ACA0 /* Main.storyboard */; };
 		99442914294FFA340086ACA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 99442913294FFA340086ACA0 /* Assets.xcassets */; };
 		99442917294FFA340086ACA0 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 99442915294FFA340086ACA0 /* LaunchScreen.storyboard */; };
 		9944291A294FFA340086ACA0 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 99442919294FFA340086ACA0 /* main.m */; };
+		99EC4389295A80F5007408C2 /* SmartDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 99EC4388295A80F5007408C2 /* SmartDevice.m */; };
+		99EC438F295AE598007408C2 /* SmartProtocol.m in Sources */ = {isa = PBXBuildFile; fileRef = 99EC438E295AE598007408C2 /* SmartProtocol.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		991C631529501426002098DE /* SelectDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SelectDevice.h; path = ViewController/SelectDevice.h; sourceTree = "<group>"; };
+		991C631629501426002098DE /* SelectDevice.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SelectDevice.m; path = ViewController/SelectDevice.m; sourceTree = "<group>"; };
 		99442904294FFA320086ACA0 /* SmartTools.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartTools.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		99442907294FFA320086ACA0 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		99442908294FFA320086ACA0 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
-		9944290A294FFA320086ACA0 /* SceneDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SceneDelegate.h; sourceTree = "<group>"; };
-		9944290B294FFA320086ACA0 /* SceneDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SceneDelegate.m; sourceTree = "<group>"; };
-		9944290D294FFA320086ACA0 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
-		9944290E294FFA320086ACA0 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
 		99442911294FFA320086ACA0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		99442913294FFA340086ACA0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		99442916294FFA340086ACA0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		99442918294FFA340086ACA0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		99442919294FFA340086ACA0 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		99EC4388295A80F5007408C2 /* SmartDevice.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = SmartDevice.m; path = ViewController/SmartDevice.m; sourceTree = "<group>"; };
+		99EC438B295A8566007408C2 /* SmartDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SmartDevice.h; path = ViewController/SmartDevice.h; sourceTree = "<group>"; };
+		99EC438D295AE562007408C2 /* SmartProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SmartProtocol.h; sourceTree = "<group>"; };
+		99EC438E295AE598007408C2 /* SmartProtocol.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SmartProtocol.m; sourceTree = "<group>"; };
+		99EC4390295D6DAA007408C2 /* ProtocolStandard.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProtocolStandard.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,19 +65,38 @@
 		99442906294FFA320086ACA0 /* SmartTools */ = {
 			isa = PBXGroup;
 			children = (
+				99442910294FFA320086ACA0 /* Main.storyboard */,
+				99EC438C295AC83B007408C2 /* SmartProtocol */,
+				99C3158A29501210002E8E7E /* ViewController */,
 				99442907294FFA320086ACA0 /* AppDelegate.h */,
 				99442908294FFA320086ACA0 /* AppDelegate.m */,
-				9944290A294FFA320086ACA0 /* SceneDelegate.h */,
-				9944290B294FFA320086ACA0 /* SceneDelegate.m */,
-				9944290D294FFA320086ACA0 /* ViewController.h */,
-				9944290E294FFA320086ACA0 /* ViewController.m */,
-				99442910294FFA320086ACA0 /* Main.storyboard */,
 				99442913294FFA340086ACA0 /* Assets.xcassets */,
 				99442915294FFA340086ACA0 /* LaunchScreen.storyboard */,
 				99442918294FFA340086ACA0 /* Info.plist */,
 				99442919294FFA340086ACA0 /* main.m */,
 			);
 			path = SmartTools;
+			sourceTree = "<group>";
+		};
+		99C3158A29501210002E8E7E /* ViewController */ = {
+			isa = PBXGroup;
+			children = (
+				991C631529501426002098DE /* SelectDevice.h */,
+				991C631629501426002098DE /* SelectDevice.m */,
+				99EC438B295A8566007408C2 /* SmartDevice.h */,
+				99EC4388295A80F5007408C2 /* SmartDevice.m */,
+			);
+			name = ViewController;
+			sourceTree = "<group>";
+		};
+		99EC438C295AC83B007408C2 /* SmartProtocol */ = {
+			isa = PBXGroup;
+			children = (
+				99EC438D295AE562007408C2 /* SmartProtocol.h */,
+				99EC438E295AE598007408C2 /* SmartProtocol.m */,
+				99EC4390295D6DAA007408C2 /* ProtocolStandard.h */,
+			);
+			path = SmartProtocol;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -146,10 +169,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9944290F294FFA320086ACA0 /* ViewController.m in Sources */,
+				99EC438F295AE598007408C2 /* SmartProtocol.m in Sources */,
+				991C631729501426002098DE /* SelectDevice.m in Sources */,
 				99442909294FFA320086ACA0 /* AppDelegate.m in Sources */,
 				9944291A294FFA340086ACA0 /* main.m in Sources */,
-				9944290C294FFA320086ACA0 /* SceneDelegate.m in Sources */,
+				99EC4389295A80F5007408C2 /* SmartDevice.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
