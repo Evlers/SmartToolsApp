@@ -124,8 +124,9 @@
     
     // 组合设备名
     uint8_t *dev_id = [self.device objectAtIndex:indexPath.row].manufacture_data->device_id;
-    NSString *dev_name = [NSString stringWithFormat:@"%@ #%02X%02X",
-                          [self.device objectAtIndex:indexPath.row].product_info.default_name, dev_id[0], dev_id[1]];
+    uint8_t capacity = [self.device objectAtIndex:indexPath.row].manufacture_data->capacity_value * 0.5 + 1.5; // 计算电池容量
+    NSString *dev_name = [NSString stringWithFormat:@"%@ %dAH #%02X%02X",
+                          [self.device objectAtIndex:indexPath.row].product_info.default_name, capacity, dev_id[0], dev_id[1]];
     
     // 配置显示数据
     cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator; // 右侧有箭头的行
@@ -195,10 +196,11 @@
     }
     
     if(![self.device containsObject:device]) // 没有添加过的设备
+    {
         [self.device addObject:device]; // 添加该设备到数组
-    
-    NSIndexPath *newIndexPath = [NSIndexPath indexPathForRow:[self.device indexOfObject:device] inSection:0];
-    [self.table insertRowsAtIndexPaths:[NSArray arrayWithObject:newIndexPath] withRowAnimation:UITableViewRowAnimationLeft];//插入Cell
+        NSIndexPath *newIndexPath = [NSIndexPath indexPathForRow:[self.device indexOfObject:device] inSection:0];
+        [self.table insertRowsAtIndexPaths:[NSArray arrayWithObject:newIndexPath] withRowAnimation:UITableViewRowAnimationLeft];//插入Cell
+    }
 }
 
 // 连接失败

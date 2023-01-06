@@ -41,12 +41,13 @@ typedef enum {
     SP_CODE_CHARGE_TIMES,                   // 读取电池包充电次数
     SP_CODE_DISCHARGE_TIMES,                // 读取电池包放电次数
     SP_CODE_WORK_TIME,                      // 读取电池包累计工作时间
-    SP_CODE_CURRENT_CUR,                    // 上报电池包当前电流
-    SP_CODE_CURRENT_PER,                    // 上报电池包当前电量
+    SP_CODE_CURRENT_CUR,                    // 上报/读取电池包当前电流
+    SP_CODE_CURRENT_PER,                    // 上报/读取电池包当前电量
     SP_CODE_UPLOAD_EVENT,                   // 上报电池包事件
-    SP_CODE_READ_BAT_VOL,                   // 读取电池电压
-    SP_CODE_READ_SHORT_NUM,                 // 读取短路次数
-    SP_CODE_READ_OVERCUR_NUM,               // 读取过流次数
+    SP_CODE_READ_BAT_VOL,                   // 上报/读取电池电压
+    SP_CODE_READ_SHORT_NUM,                 // 上报/读取短路次数
+    SP_CODE_READ_OVERCUR_NUM,               // 上报/读取过流次数
+    SP_CODE_BATTERY_STATUS,                 // 上报/读取电池包状态
 
     // Subdevice interface
     SP_CODE_UPLOAD_TOOLS = 0x30,            // 上报工具数据

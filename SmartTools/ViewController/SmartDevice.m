@@ -33,6 +33,7 @@
 @interface SmartDevice () <CBPeripheralDelegate, UITableViewDelegate, UITableViewDataSource, SmartProtocolDelegate>
 
 @property (nonatomic, strong) UITableView *table;           // 功能列表视图
+@property (nonatomic, strong) NSMutableArray *send_queue;   // 数据发送队列
 @property (nonatomic, strong) NSMutableArray *data_point;   // 数据点,嵌套可变数组,第一级为 Table 组
 @property (nonatomic, strong) NSString *service_uuid;       // 服务 UUID
 @property (nonatomic, strong) NSString *upload_uuid;        // 上报特征 UUID
@@ -50,6 +51,7 @@
     self.smart_protocol = [[SmartProtocol alloc]init];
     self.smart_protocol.delegate = self;
     self.data_point = [NSMutableArray array];
+    self.send_queue = [NSMutableArray array];
     
     self.table = [self.view viewWithTag:10];
     self.table.delegate = self;
@@ -89,16 +91,22 @@
     [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Protection voltage"]];
     [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Maximum discharge current"]];
     [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Function switch"]];
+    [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Battery status"]];
     [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Work mode"]];
+    [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Work time"]];
     [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Charger times"]];
     [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Discharger times"]];
-    [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Work time"]];
     [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Current current"]];
     [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Battery percent"]];
     [self.data_point addObject:bat_base_info];
     [self.table insertSections:[NSIndexSet indexSetWithIndex:self.data_point.count-1] withRowAnimation:UITableViewRowAnimationLeft]; // 插入数据
     
-    self.title = self.device.product_info.default_name; // 使用默认名字作为标题
+    // 组合设备名
+    uint8_t *dev_id = self.device.manufacture_data->device_id;
+    uint8_t capacity = self.device.manufacture_data->capacity_value * 0.5 + 1.5; // 计算电池容量
+    NSString *dev_name = [NSString stringWithFormat:@"%@ %dAH #%02X%02X",
+                          self.device.product_info.default_name, capacity, dev_id[0], dev_id[1]];
+    self.title = dev_name; // 刷新标题
     
     self.device.peripheral.delegate = self; // 设置代理
     [self.device.peripheral discoverServices:nil]; // 扫描服务
@@ -127,22 +135,40 @@
 // 设备应答处理
 - (void)SmartProtocolResponseHandler:(protocol_body_t *)body with_code:(uint8_t)code {
     
-    NSString *value = nil;
-    NSIndexPath *index = nil;
     uint8_t result = body->code & ~0x80; // 获取应答结果
-    
     NSData *data = [NSData dataWithBytes:body->data length:body->len];
     NSLog(@"Device response seq: %d, code: %d, result: %d, data:%@", body->seq, code, result, data);
+    
+    if (result != 0) { // 应答错误
+        if (code == SP_CODE_CONNECT)
+            [self.smart_protocol send_connect]; // 尝试再次发送握手指令
+        return ;
+    }
+    
+    [self commandHandler:code body:body]; // 处理指令应答
+}
+
+//  设备上报处理
+- (uint8_t)SmartProtocolUploadHandler:(protocol_body_t *)body response:(protocol_body_t *)rsp_body {
+    
+    NSData *data = [NSData dataWithBytes:body->data length:body->len];
+    NSLog(@"Device upload seq: %d, code: %d, data:%@", body->seq, body->code, data);
+    
+    [self commandHandler:body->code body:body]; // 处理指令上报
+    
+    return 0;
+}
+
+- (void)commandHandler:(uint8_t) code body:(protocol_body_t *) body {
+
+    NSString *value = nil;
+    NSIndexPath *index = nil;
     
     switch (code)
     {
         case SP_CODE_CONNECT: // 握手连接
         {
-            if (result != 0) {
-                [self.smart_protocol send_connect]; // 尝试再次发送握手指令
-                break ;
-            }
-            
+            [self.smart_protocol send_get_command:SP_CODE_BAT_TEMP];            // 发送电池温度查询指令
             [self.smart_protocol send_get_command:SP_CODE_FIRMWARE_VER];        // 发送固件版本查询指令
             [self.smart_protocol send_get_command:SP_CODE_HARDWARE_VER];        // 发送硬件版本查询指令
             [self.smart_protocol send_get_command:SP_CODE_DEV_UUID];            // 发送设备UIUD查询指令
@@ -153,24 +179,9 @@
             [self.smart_protocol send_get_command:SP_CODE_WORK_TIME];           // 发送工作时间查询指令
             [self.smart_protocol send_get_command:SP_CODE_CHARGE_TIMES];        // 发送充电次数查询指令
             [self.smart_protocol send_get_command:SP_CODE_DISCHARGE_TIMES];     // 发送放电次数查询指令
-//            [self.smart_protocol send_get_command:SP_CODE_CURRENT_CUR];         // 发送当前电流查询指令
-//            [self.smart_protocol send_get_command:SP_CODE_CURRENT_PER];         // 发送当前电量查询指令
-            
-            // 创建定时查询的任务块
-            static dispatch_block_t timer_get_block = nil;
-            if (timer_get_block != nil)
-                dispatch_block_cancel(timer_get_block); // 取消上次的执行
-            
-            timer_get_block = dispatch_block_create(DISPATCH_BLOCK_BARRIER , ^{ // 创建超时处理的定时任务
-                
-                if (self.device.peripheral.state == CBPeripheralStateConnected) { // 如果还在连接状态
-                    [self.smart_protocol send_get_command:SP_CODE_BAT_TEMP]; // 发送电池温度查询指令
-                    
-                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), timer_get_block); // 1秒后再次执行
-                } else
-                    timer_get_block = nil;
-            });
-            dispatch_async(dispatch_get_main_queue(), timer_get_block); // 开始异步执行
+            [self.smart_protocol send_get_command:SP_CODE_CURRENT_CUR];         // 发送当前电流查询指令
+            [self.smart_protocol send_get_command:SP_CODE_CURRENT_PER];         // 发送当前电量查询指令
+            [self.smart_protocol send_get_command:SP_CODE_BATTERY_STATUS];      // 发送电池包状态查询指令
         }
         break;
             
@@ -232,6 +243,21 @@
             }
         break;
             
+        case SP_CODE_BATTERY_STATUS:
+            if (body->len == sizeof(uint32_t)) {
+                uint32_t status = body->data[0] | (((uint32_t)body->data[1]) << 8) |
+                (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
+                uint8_t io_sta = status & 0x00000003;
+                switch (io_sta)
+                {
+                    case 0: value = [NSString stringWithFormat:@"Standby"]; break;
+                    case 1: value = [NSString stringWithFormat:@"Charger"]; break;
+                    case 2: value = [NSString stringWithFormat:@"Discharger"]; break;
+                }
+                index = [self set_data_poinit:@"Battery status" value:value];
+            }
+        break;
+            
         case SP_CODE_WORK_MODE:
             if (body->len == sizeof(uint8_t)) {
                 uint8_t mode = body->data[0];
@@ -285,7 +311,7 @@
             break;
             
         default:
-            NSLog(@"Unknown code for response: %d", code);
+            NSLog(@"Unknown code: %d", code);
             return ;
         break;
     }
@@ -294,62 +320,16 @@
         [UIView performWithoutAnimation:^{ // 无动画
             [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:index] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
         }];
-//            DataPoint *data_point = [((NSMutableArray *)[self.data_point objectAtIndex:index.section]) objectAtIndex:index.row];
-//            NSLog(@"%@: %@", data_point.name, data_point.value);
     }
-}
-
-//  设备上报处理
-- (uint8_t)SmartProtocolUploadHandler:(protocol_body_t *)body response:(protocol_body_t *)rsp_body {
-    
-    NSString *value = nil;
-    NSIndexPath *index = nil;
-    NSData *data = [NSData dataWithBytes:body->data length:body->len];
-    NSLog(@"Device upload seq: %d, code: %d, data:%@", body->seq, body->code, data);
-    
-    switch (body->code)
-    {
-        case SP_CODE_BAT_TEMP:
-            
-            break;
-            
-        case SP_CODE_CURRENT_CUR:
-            if (body->len == sizeof(uint32_t)) {
-                uint32_t cur = body->data[0] | (((uint32_t)body->data[1]) << 8) |
-                (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
-                value = [NSString stringWithFormat:@"%0.1fA", (float)cur / 1000.0];
-                index = [self set_data_poinit:@"Current current" value:value];
-            }
-        break;
-            
-        case SP_CODE_CURRENT_PER:
-            if (body->len == sizeof(uint8_t)) {
-                uint8_t percent = body->data[0];
-                value = [NSString stringWithFormat:@"%d%%", percent];
-                index = [self set_data_poinit:@"Battery percent" value:value];
-            }
-        break;
-            
-        default:
-            NSLog(@"Unknown code for upload: %d", body->code);
-            break;
-    }
-    
-    if (index != nil) {
-        [UIView animateWithDuration:0 animations:^{ // 无动画
-            [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:index] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
-        } completion:nil];
-//            DataPoint *data_point = [((NSMutableArray *)[self.data_point objectAtIndex:index.section]) objectAtIndex:index.row];
-//            NSLog(@"%@: %@", data_point.name, data_point.value);
-    }
-    
-    return 0;
 }
 
 // 智能包协议数据帧下发接口
 - (void)SmartProtocolDataSend:(NSData *)data {
-//    NSLog(@"BLE data send: %@", data);
-    [self.device.peripheral writeValue:data forCharacteristic:self.write_char type:CBCharacteristicWriteWithResponse];
+    if (self.device.peripheral.canSendWriteWithoutResponse != true || self.send_queue.count != 0) { // BLE未就绪 或者 发送队列中还有数据未发送
+        [self.send_queue addObject:data]; // 保存数据等待就绪后发送
+    } else { // 蓝牙就绪且队列已发送完
+        [self.device.peripheral writeValue:data forCharacteristic:self.write_char type:CBCharacteristicWriteWithoutResponse];
+    }
 }
 
 #pragma mark -- BLE 接口
@@ -397,8 +377,6 @@
 
 // 已经更新特征值
 -(void)peripheral:(CBPeripheral *)peripheral didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic error:(NSError *)error {
-//    NSLog(@"Update the value in the characteristic %@, value: %@", characteristic.UUID.UUIDString, characteristic.value);
-//    NSLog(@"BLE data recv: %@", characteristic.value);
     if (characteristic.UUID.UUIDString == self.upload_uuid) {
         [self.smart_protocol receive_data_handle:characteristic.value]; // 处理协议数据
     }
@@ -413,9 +391,14 @@
     [self.smart_protocol send_connect]; // 发送握手连接
 }
 
-// 设备已就绪，可以开始写入数据
+// 写入无应答数据已完成
 - (void)peripheralIsReadyToSendWriteWithoutResponse:(CBPeripheral *)peripheral {
-    NSLog(@"Peripheral is ready to send write without response");
+    if (self.send_queue.count) { // 队列中还有数据未发送
+        NSData *send_data;
+        send_data = [self.send_queue objectAtIndex:0]; // 获取一帧数据
+        [self.device.peripheral writeValue:send_data forCharacteristic:self.write_char type:CBCharacteristicWriteWithoutResponse]; // 发送数据
+        [self.send_queue removeObject:send_data]; // 删除已发送到数据
+    }
 }
 
 #pragma mark -- TableView 接口

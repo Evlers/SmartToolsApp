@@ -148,7 +148,7 @@
         record.code = body->code; // 保存指令代码
         record.seq = body->seq;  // 保存包序号
         [self.queue addObject:record]; // 添加发送数据到队列中(等待指令数据应答)
-        NSLog(@"Add body seq %d to queue", record.seq);
+        NSLog(@"Add body seq %d to wait responbse queue", record.seq);
     }
     
     // 生成 Frame

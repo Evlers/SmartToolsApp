@@ -33,9 +33,10 @@
     // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
     // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
     NSLog(@"App enter backgroud");
-    UIStoryboard *mainStory = [UIStoryboard storyboardWithName:@"Main" bundle:nil]; // 获取XIB文件
-    SmartDevice *device_view = [mainStory instantiateViewControllerWithIdentifier:@"DeviceView"]; // 获取试图控制器
-    device_view.device.peripheral 
+//    UIStoryboard *mainStory = [UIStoryboard storyboardWithName:@"Main" bundle:nil]; // 获取XIB文件
+//    SmartDevice *device_view = [mainStory instantiateViewControllerWithIdentifier:@"DeviceView"]; // 获取试图控制器
+//    [device_view.navigationController popViewControllerAnimated:YES];
+//    [self.window.rootViewController.navigationController popViewControllerAnimated:YES];
 }
 
 // 即将进入前台
