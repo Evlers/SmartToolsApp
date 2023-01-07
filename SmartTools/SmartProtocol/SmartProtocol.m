@@ -82,6 +82,7 @@
     {
         for (Record *record in self.queue) { // 遍历发送队列
             if (record.seq == body.seq) { // 匹配到数据包序号
+                dispatch_block_cancel(record.block); // 取消超时处理
                 switch (record.code)
                 {
                     case SP_CODE_CONNECT: // 握手连接应答
@@ -142,23 +143,12 @@
     }
     
     if (!(body->code & BODY_REPLY_BIT)) // 如果不是应答数据
-    {
-        Record *record = [Record alloc]; // 分配队列记录
         body->seq = self.pack_seq ++; // 分配包序号
-        record.code = body->code; // 保存指令代码
-        record.seq = body->seq;  // 保存包序号
-        [self.queue addObject:record]; // 添加发送数据到队列中(等待指令数据应答)
-        NSLog(@"Add body seq %d to wait responbse queue", record.seq);
-    }
     
     // 生成 Frame
     frame.fcb = fcb;
     frame.len = BODY_HEAD_LEN + body->len + 1/* bcc */;
     frame.body = malloc(BODY_HEAD_LEN + body->len + 1/* bcc */ + 0x10 /* AES Data align */);
-    if (frame.body == NULL) {
-        NSLog(@"The frame body failed to allocate memroy");
-        return ;
-    }
     
     if (frame.len > FRAME_BODY_MAX_LEN) {
         NSLog(@"frame body is too long, body code: %d", body->code);
@@ -179,10 +169,6 @@
     // 组合数据帧
     NSData *send_data;
     uint8_t *send_buffer = malloc(FRAME_HEAD_LEN + frame.len);
-    if (send_buffer == nil) {
-        NSLog(@"Memroy alloc failed !");
-        goto _exit;
-    }
     
     send_buffer[0] = frame.fcb;
     send_buffer[1] = frame.len & 0xFF;
@@ -191,9 +177,33 @@
     
     send_data = [NSData dataWithBytes:send_buffer length:FRAME_HEAD_LEN + frame.len]; // 转换成NSData类型
     
+    if (!(body->code & BODY_REPLY_BIT)) // 如果不是应答数据
+    {
+        Record *record = [Record alloc]; // 分配队列记录
+        record.try_cnt = 0; //  清除重发计数
+        record.code = body->code; // 保存指令代码
+        record.seq = body->seq;  // 保存包序号
+        [self.queue addObject:record]; // 添加发送数据到队列中(等待指令数据应答)
+
+        // 超时应答处理
+        record.block = dispatch_block_create(DISPATCH_BLOCK_BARRIER , ^{ // 创建超时处理的定时任务
+            if (record.try_cnt < RESEND_TRY_NUM) { // 小于可重发次数
+                NSLog(@"Smart protocol try (%d) send seq %d, code %d, data:%@", record.try_cnt + 1, record.seq, record.code, send_data);
+                [self.delegate SmartProtocolDataSend:send_data]; // 重新发送数据
+                record.try_cnt ++;
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, REPLY_TIMEOUT_VALUE * NSEC_PER_MSEC), dispatch_get_main_queue(), record.block);
+
+            } else { // 重发次数超出未收到应答
+                [self.queue removeObject:record]; // 删除该指令记录
+                NSLog(@"Smart protocol frame no response, seq %d, code %d discarded", record.seq, record.code);
+            }
+        });
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, REPLY_TIMEOUT_VALUE * NSEC_PER_MSEC), dispatch_get_main_queue(), record.block);
+        NSLog(@"Download seq: %d, code: %d", body->seq, body->code);
+    }
+    
     [self.delegate SmartProtocolDataSend:send_data]; // 发送数据
     
-_exit:
     free(send_buffer);
     free(frame.body);
 }
@@ -317,6 +327,7 @@ _exit:
 
 // 异或运算编解码
 - (void)frame_codec:(protocol_frame_t *)frame {
+    if (self.rand_key == nil) return ;
     for(uint16_t i = 0; i < frame->len; i ++) {
         ((uint8_t *)frame->body)[i] ^= ((uint8_t *)self.rand_key.bytes)[i % 8];
     }

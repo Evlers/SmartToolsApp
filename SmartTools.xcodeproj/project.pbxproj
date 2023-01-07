@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9904CBC62969219F007CF40D /* FirmwareUpgrade.m in Sources */ = {isa = PBXBuildFile; fileRef = 9904CBC52969219F007CF40D /* FirmwareUpgrade.m */; };
 		991C631729501426002098DE /* SelectDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 991C631629501426002098DE /* SelectDevice.m */; };
 		99442909294FFA320086ACA0 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 99442908294FFA320086ACA0 /* AppDelegate.m */; };
 		99442912294FFA320086ACA0 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 99442910294FFA320086ACA0 /* Main.storyboard */; };
@@ -18,6 +19,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		9904CBC52969219F007CF40D /* FirmwareUpgrade.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = FirmwareUpgrade.m; path = ViewController/FirmwareUpgrade.m; sourceTree = "<group>"; };
+		9904CBC7296921E2007CF40D /* FirmwareUpgrade.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FirmwareUpgrade.h; sourceTree = "<group>"; };
 		991C631529501426002098DE /* SelectDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SelectDevice.h; path = ViewController/SelectDevice.h; sourceTree = "<group>"; };
 		991C631629501426002098DE /* SelectDevice.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SelectDevice.m; path = ViewController/SelectDevice.m; sourceTree = "<group>"; };
 		99442904294FFA320086ACA0 /* SmartTools.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartTools.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -66,8 +69,8 @@
 			isa = PBXGroup;
 			children = (
 				99442910294FFA320086ACA0 /* Main.storyboard */,
-				99EC438C295AC83B007408C2 /* SmartProtocol */,
 				99C3158A29501210002E8E7E /* ViewController */,
+				99EC438C295AC83B007408C2 /* SmartProtocol */,
 				99442907294FFA320086ACA0 /* AppDelegate.h */,
 				99442908294FFA320086ACA0 /* AppDelegate.m */,
 				99442913294FFA340086ACA0 /* Assets.xcassets */,
@@ -85,6 +88,8 @@
 				991C631629501426002098DE /* SelectDevice.m */,
 				99EC438B295A8566007408C2 /* SmartDevice.h */,
 				99EC4388295A80F5007408C2 /* SmartDevice.m */,
+				9904CBC7296921E2007CF40D /* FirmwareUpgrade.h */,
+				9904CBC52969219F007CF40D /* FirmwareUpgrade.m */,
 			);
 			name = ViewController;
 			sourceTree = "<group>";
@@ -174,6 +179,7 @@
 				99442909294FFA320086ACA0 /* AppDelegate.m in Sources */,
 				9944291A294FFA340086ACA0 /* main.m in Sources */,
 				99EC4389295A80F5007408C2 /* SmartDevice.m in Sources */,
+				9904CBC62969219F007CF40D /* FirmwareUpgrade.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

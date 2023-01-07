@@ -25,9 +25,10 @@
 
 @interface Record : NSObject
 
-@property (nonatomic, assign) uint16_t  seq;        // 包序号
-@property (nonatomic, assign) uint8_t   code;       // 包代码
-@property (nonatomic, strong) NSData    *frame;     // 数据帧
+@property (nonatomic, assign) uint16_t          seq;        // 发送的包序号
+@property (nonatomic, assign) uint8_t           code;       // 发送的包指令代码
+@property (nonatomic, assign) uint8_t           try_cnt;    // 等待超时重发计数
+@property (nonatomic, strong) dispatch_block_t  block;      // 等待应答超时执行块
 
 @end
 

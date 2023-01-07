@@ -16,6 +16,7 @@
 
 @property (nonatomic, strong) NSString *name;
 @property (nonatomic, strong) NSString *value;
+@property (nonatomic) UITableViewCellAccessoryType accessoryType;
 
 - (DataPoint *)initWithName:(NSString *)name value:(NSString *)value;
 

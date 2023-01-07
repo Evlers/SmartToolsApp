@@ -8,6 +8,7 @@
 #import "SelectDevice.h"
 #import "SmartProtocol.h"
 #import "SmartDevice.h"
+#import "FirmwareUpgrade.h"
 
 #define DEFAULT_SERVIICE_UUID       @"FFF0"
 #define DEFAULT_UPLOAD_UUID         @"FFF1"
@@ -18,12 +19,21 @@
 - (DataPoint *)initWithName:(NSString *)name {
     self.name = name;
     self.value = nil;
+    self.accessoryType = UITableViewCellAccessoryNone;
+    return self;
+}
+
+- (DataPoint *)initWithName:(NSString *)name type:(UITableViewCellAccessoryType)type {
+    self.name = name;
+    self.value = nil;
+    self.accessoryType = type;
     return self;
 }
 
 - (DataPoint *)initWithName:(NSString *)name value:(NSString *)value {
     self.name = name;
     self.value = value;
+    self.accessoryType = UITableViewCellAccessoryNone;
     return self;
 }
 
@@ -62,7 +72,12 @@
 
 // 即将进入视图
 -(void)viewWillAppear:(BOOL)animated {
+    
+}
 
+// 已经进入视图
+-(void)viewDidAppear:(BOOL)animated {
+    
     if (self.device.manufacture_data->uuid_flag == 0x5A) { // 使用自定义UUID
         self.service_uuid = [NSString stringWithFormat:@"%04X", self.device.manufacture_data->server_uiud];
         self.upload_uuid = [NSString stringWithFormat:@"%04X", self.device.manufacture_data->upload_uuid];
@@ -79,7 +94,7 @@
     
     // device base info
     NSMutableArray *dev_base_info = [NSMutableArray array];
-    [dev_base_info addObject:[[DataPoint alloc]initWithName:@"Firmware version"]];
+    [dev_base_info addObject:[[DataPoint alloc]initWithName:@"Firmware version" type:UITableViewCellAccessoryDisclosureIndicator]];
     [dev_base_info addObject:[[DataPoint alloc]initWithName:@"Hardware version"]];
     [dev_base_info addObject:[[DataPoint alloc]initWithName:@"Device uuid"]];
     [self.data_point addObject:dev_base_info];
@@ -102,18 +117,14 @@
     [self.table insertSections:[NSIndexSet indexSetWithIndex:self.data_point.count-1] withRowAnimation:UITableViewRowAnimationLeft]; // 插入数据
     
     // 组合设备名
-    uint8_t *dev_id = self.device.manufacture_data->device_id;
     uint8_t capacity = self.device.manufacture_data->capacity_value * 0.5 + 1.5; // 计算电池容量
-    NSString *dev_name = [NSString stringWithFormat:@"%@ %dAH #%02X%02X",
-                          self.device.product_info.default_name, capacity, dev_id[0], dev_id[1]];
+    NSString *dev_name = [NSString stringWithFormat:@"%@ %dAH",
+                          self.device.product_info.default_name, capacity];
     self.title = dev_name; // 刷新标题
     
     self.device.peripheral.delegate = self; // 设置代理
     [self.device.peripheral discoverServices:nil]; // 扫描服务
-}
-
-// 已经进入视图
--(void)viewDidAppear:(BOOL)animated {
+    
     [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
 }
 
@@ -221,7 +232,7 @@
         case SP_CODE_PROTECT_VOLT:
             if (body->len == sizeof(uint16_t)) {
                 uint16_t volt = body->data[0] | (((uint16_t)body->data[1]) << 8);
-                value = [NSString stringWithFormat:@"%0.2fV", (float)volt / 10.0];
+                value = [NSString stringWithFormat:@"%0.2fV", (float)volt / 1000.0];
                 index = [self set_data_poinit:@"Protection voltage" value:value];
             }
         break;
@@ -426,16 +437,16 @@
 // 返回每行的数据
 -(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     UITableViewCell *cell;
+    DataPoint *data_point = [(NSMutableArray *)[self.data_point objectAtIndex:indexPath.section] objectAtIndex:indexPath.row];
     NSString *identifier = [NSString stringWithFormat:@"cell %ld %ld",(long)indexPath.section,(long)indexPath.row]; // 生成队列ID
     cell = [tableView dequeueReusableCellWithIdentifier:identifier]; // 通过队列ID出列Cell
     
     if(cell == NULL) {// 没有创建过此Cell
         cell = [[UITableViewCell alloc]initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:identifier]; // 创建新的Cell
-        cell.accessoryType = UITableViewCellAccessoryNone;
+        cell.accessoryType = data_point.accessoryType;
     }
     
     // 配置显示数据
-    DataPoint *data_point = [(NSMutableArray *)[self.data_point objectAtIndex:indexPath.section] objectAtIndex:indexPath.row];
     cell.textLabel.text = data_point.name;
     cell.detailTextLabel.text = (data_point.value == nil) ? @"" : data_point.value;
     return cell;
@@ -443,7 +454,16 @@
 
 // 选中
 -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
+    DataPoint *data_point = [(NSMutableArray *)[self.data_point objectAtIndex:indexPath.section] objectAtIndex:indexPath.row];
+    NSLog(@"Seletctd %@", data_point.name);
+    if ([data_point.name containsString:@"Firmware version"]) {
+        UIStoryboard *mainStory = [UIStoryboard storyboardWithName:@"Main" bundle:nil]; // 获取XIB文件
+        FirmwareUpgrade *view = [mainStory instantiateViewControllerWithIdentifier:@"UpgradeView"]; // 获取试图控制器
+        [self.navigationController pushViewController:view animated:YES]; // 进入固件更新页面
+        
+    } else {
+        [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
+    }
 }
 
 - (void)didReceiveMemoryWarning {
