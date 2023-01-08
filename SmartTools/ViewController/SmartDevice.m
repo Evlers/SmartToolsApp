@@ -42,6 +42,7 @@
 
 @interface SmartDevice () <CBPeripheralDelegate, UITableViewDelegate, UITableViewDataSource, SmartProtocolDelegate>
 
+@property (nonatomic, strong) UIAlertController *alert;     // 提示窗口
 @property (nonatomic, strong) UITableView *table;           // 功能列表视图
 @property (nonatomic, strong) NSMutableArray *send_queue;   // 数据发送队列
 @property (nonatomic, strong) NSMutableArray *data_point;   // 数据点,嵌套可变数组,第一级为 Table 组
@@ -77,6 +78,13 @@
 
 // 已经进入视图
 -(void)viewDidAppear:(BOOL)animated {
+    [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
+}
+
+// 连接中
+- (void)connecting {
+    self.alert = [UIAlertController alertControllerWithTitle:@"Cconnecting" message:@"Connect device.." preferredStyle:UIAlertControllerStyleAlert];
+    [self presentViewController:self.alert animated:NO completion:nil]; // 显示提示窗口
     
     if (self.device.manufacture_data->uuid_flag == 0x5A) { // 使用自定义UUID
         self.service_uuid = [NSString stringWithFormat:@"%04X", self.device.manufacture_data->server_uiud];
@@ -121,11 +129,13 @@
     NSString *dev_name = [NSString stringWithFormat:@"%@ %dAH",
                           self.device.product_info.default_name, capacity];
     self.title = dev_name; // 刷新标题
-    
+}
+
+// 已连接
+- (void)connected {
+    self.alert.message = @"Discover srervices..";
     self.device.peripheral.delegate = self; // 设置代理
     [self.device.peripheral discoverServices:nil]; // 扫描服务
-    
-    [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
 }
 
 // 设置数据点
@@ -193,6 +203,7 @@
             [self.smart_protocol send_get_command:SP_CODE_CURRENT_CUR];         // 发送当前电流查询指令
             [self.smart_protocol send_get_command:SP_CODE_CURRENT_PER];         // 发送当前电量查询指令
             [self.smart_protocol send_get_command:SP_CODE_BATTERY_STATUS];      // 发送电池包状态查询指令
+            [self dismissViewControllerAnimated:YES completion:nil]; // 退出提示框
         }
         break;
             
@@ -347,6 +358,7 @@
 
 // 已经发现服务
 -(void)peripheral:(CBPeripheral *)peripheral didDiscoverServices:(NSError *)error {
+    self.alert.message = @"Discover characteristics..";
     for (CBService *service in peripheral.services) {
         NSLog(@"Server: %@", service);
         [peripheral discoverCharacteristics:nil forService:service];//扫描服务里面的特征
@@ -396,6 +408,7 @@
 // 已经更新通知状态
 - (void)peripheral:(CBPeripheral *)peripheral didUpdateNotificationStateForCharacteristic:(CBCharacteristic *)characteristic error:(nullable NSError *)error {
     NSLog(@"Did enable the notification state in the characteristic %@", characteristic.UUID.UUIDString);
+    self.alert.message = @"Shaking..";
     
     NSData *aes_key_tail = [NSData dataWithBytes:self.device.manufacture_data->aes_key_tail length:8];
     [self.smart_protocol aes_tail_key_set:aes_key_tail]; // 设置AES(ECB)密钥

@@ -141,10 +141,13 @@
     [self.centralManager connectPeripheral:[self.device objectAtIndex:indexPath.row].peripheral options:nil]; // 连接设备
     
     self.device_view.device = [self.device objectAtIndex:indexPath.row]; // 传递设备信息到设备窗口
+    [self.navigationController pushViewController:self.device_view animated:YES]; // 跳转到设备窗口
+    [self.device_view connecting]; // 提示连接中
     
     self.connectFailedBlock = dispatch_block_create(DISPATCH_BLOCK_BARRIER , ^{ // 创建超时处理的定时任务
         if([self.device objectAtIndex:indexPath.row].peripheral.state != CBPeripheralStateConnected){ // 如果没有连接
             [self.centralManager cancelPeripheralConnection:[self.device objectAtIndex:indexPath.row].peripheral]; // 取消连接
+            [self.navigationController popViewControllerAnimated:YES]; // 返回上一个窗口
             [self.table deselectRowAtIndexPath:indexPath animated:YES]; // 取消选中
         }
     });
@@ -220,7 +223,7 @@
 
 // 已经连接设备
 -(void)centralManager:(CBCentralManager *)central didConnectPeripheral:(CBPeripheral *)peripheral {
-    [self.navigationController pushViewController:self.device_view animated:YES]; // 跳转到设备窗口
+    [self.device_view connected]; // 设备已连接
     dispatch_block_cancel(self.connectFailedBlock); // 取消超时任务
     NSLog(@"Connected to %@", peripheral.name);
 }
