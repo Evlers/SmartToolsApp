@@ -74,17 +74,11 @@
 // 即将进入视图
 -(void)viewWillAppear:(BOOL)animated {
     
-}
-
-// 已经进入视图
--(void)viewDidAppear:(BOOL)animated {
     [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
-}
-
-// 连接中
-- (void)connecting {
+    if (self.device.peripheral.state == CBPeripheralStateConnected) return ; // 如果已连接则不执行以下处理
+    
     self.alert = [UIAlertController alertControllerWithTitle:@"Cconnecting" message:@"Connect device.." preferredStyle:UIAlertControllerStyleAlert];
-    [self presentViewController:self.alert animated:NO completion:nil]; // 显示提示窗口
+    [self presentViewController:self.alert animated:YES completion:nil]; // 显示提示窗口
     
     if (self.device.manufacture_data->uuid_flag == 0x5A) { // 使用自定义UUID
         self.service_uuid = [NSString stringWithFormat:@"%04X", self.device.manufacture_data->server_uiud];
@@ -136,6 +130,14 @@
     self.alert.message = @"Discover srervices..";
     self.device.peripheral.delegate = self; // 设置代理
     [self.device.peripheral discoverServices:nil]; // 扫描服务
+}
+
+// 断开连接
+- (void)disconnect {
+    [self.send_queue removeAllObjects]; // 删除发送队列中的所有数据
+    if (self.alert != nil) // 如果还没连接完成就被退出窗口
+        [self.navigationController popViewControllerAnimated:YES]; // 退出提示窗口
+    [self.navigationController popToRootViewControllerAnimated:YES]; // 退出到主窗口
 }
 
 // 设置数据点
@@ -204,6 +206,7 @@
             [self.smart_protocol send_get_command:SP_CODE_CURRENT_PER];         // 发送当前电量查询指令
             [self.smart_protocol send_get_command:SP_CODE_BATTERY_STATUS];      // 发送电池包状态查询指令
             [self dismissViewControllerAnimated:YES completion:nil]; // 退出提示框
+            self.alert = nil; // 清除提示窗口
         }
         break;
             
@@ -358,16 +361,25 @@
 
 // 已经发现服务
 -(void)peripheral:(CBPeripheral *)peripheral didDiscoverServices:(NSError *)error {
-    self.alert.message = @"Discover characteristics..";
+    
     for (CBService *service in peripheral.services) {
         NSLog(@"Server: %@", service);
-        [peripheral discoverCharacteristics:nil forService:service];//扫描服务里面的特征
+        if (service.UUID.UUIDString == self.service_uuid) { // 数据通讯服务
+            self.write_char = nil;
+            [peripheral discoverCharacteristics:nil forService:service];//扫描服务里面的特征
+            self.alert.message = @"Discover characteristics..";
+            return ;
+        }
     }
+    
+    NSLog(@"No service is found");
+    [self disconnect];// 未发现通讯的服务 断开连接
 }
 
 // 发现特征
 -(void)peripheral:(CBPeripheral *)peripheral didDiscoverCharacteristicsForService:(CBService *)service error:(NSError *)error {
     
+    bool discover_upload_uuid = false;
     if (service.UUID.UUIDString != self.service_uuid) return ;
     
     for (CBCharacteristic *Characteristic in service.characteristics) { // 遍历所有特征
@@ -376,6 +388,7 @@
             if (Characteristic.properties & CBCharacteristicPropertyNotify) { // 如果特征支持通知
                 NSLog(@"Discover the upload characteristic, will enable the notify in the characteristic %@", Characteristic.UUID.UUIDString);
                 [peripheral setNotifyValue:YES forCharacteristic:Characteristic]; // 打开通知功能
+                discover_upload_uuid = true;
             } else { // 错误：上报的特征不支持通知功能
                 NSLog(@"Upload Characteristic %@ no support notify", Characteristic.UUID.UUIDString);
             }
@@ -384,7 +397,11 @@
         if (Characteristic.UUID.UUIDString == self.download_uuid) { // 如果是下发特征
             self.write_char = Characteristic; // 保存该特征 用于下发数据
         }
-        
+    }
+    
+    if (self.write_char == nil || discover_upload_uuid == false) {// 如果没发现写入特征或者上报特征
+        [self disconnect]; // 断开连接
+        NSLog(@"No write feature or report feature is found");
     }
 }
 

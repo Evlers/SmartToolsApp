@@ -27,8 +27,8 @@
 @property (nonatomic, strong) Device *device;
 @property (nonatomic, strong) SmartProtocol *smart_protocol;// 智能包协议
 
-- (void)connecting;
 - (void)connected;
+- (void)disconnect;
 
 @end
 
