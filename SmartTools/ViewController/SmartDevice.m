@@ -50,6 +50,7 @@
 @property (nonatomic, strong) NSString *upload_uuid;        // 上报特征 UUID
 @property (nonatomic, strong) NSString *download_uuid;      // 下发特征 UUID
 @property (nonatomic, strong) CBCharacteristic *write_char; // 写入特征
+@property (nonatomic, strong) dispatch_block_t conTimeoutBlock; // 连接超时块
 
 @end
 
@@ -80,10 +81,10 @@
     self.alert = [UIAlertController alertControllerWithTitle:@"Cconnecting" message:@"Connect device.." preferredStyle:UIAlertControllerStyleAlert];
     [self presentViewController:self.alert animated:YES completion:nil]; // 显示提示窗口
     
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 6 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ // 超时关闭提示框
-        if (self.alert != nil)
-            [self.navigationController dismissViewControllerAnimated:YES completion:nil]; // 退出提示窗口
+    self.conTimeoutBlock = dispatch_block_create(DISPATCH_BLOCK_BARRIER, ^{ // 超时关闭提示框
+        [self disconnect]; // 断开蓝牙连接
     });
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 10 * NSEC_PER_SEC), dispatch_get_main_queue(), self.conTimeoutBlock);
     
     if (self.device.manufacture_data->uuid_flag == 0x5A) { // 使用自定义UUID
         self.service_uuid = [NSString stringWithFormat:@"%04X", self.device.manufacture_data->server_uiud];
@@ -140,8 +141,11 @@
 // 断开连接
 - (void)disconnect {
     [self.send_queue removeAllObjects]; // 删除发送队列中的所有数据
-    if (self.alert != nil) // 如果还没连接完成就被退出窗口
-        [self.navigationController popViewControllerAnimated:YES]; // 退出提示窗口
+    if (self.alert != nil) {// 如果还没连接完成就被退出窗口
+        dispatch_block_cancel(self.conTimeoutBlock); // 取消超时执行块
+        self.alert = nil;
+        [self dismissViewControllerAnimated:YES completion:nil]; // 退出提示框
+    }
     [self.navigationController popToRootViewControllerAnimated:YES]; // 退出到主窗口
 }
 
@@ -210,8 +214,9 @@
             [self.smart_protocol send_get_command:SP_CODE_CURRENT_CUR];         // 发送当前电流查询指令
             [self.smart_protocol send_get_command:SP_CODE_CURRENT_PER];         // 发送当前电量查询指令
             [self.smart_protocol send_get_command:SP_CODE_BATTERY_STATUS];      // 发送电池包状态查询指令
-            [self dismissViewControllerAnimated:YES completion:nil]; // 退出提示框
             self.alert = nil; // 清除提示窗口
+            [self dismissViewControllerAnimated:YES completion:nil]; // 退出提示框
+            dispatch_block_cancel(self.conTimeoutBlock); // 取消超时执行块
         }
         break;
             
@@ -355,6 +360,7 @@
 
 // 智能包协议数据帧下发接口
 - (void)SmartProtocolDataSend:(NSData *)data {
+    if (self.write_char == nil) return ;
     if (self.device.peripheral.canSendWriteWithoutResponse != true || self.send_queue.count != 0) { // BLE未就绪 或者 发送队列中还有数据未发送
         [self.send_queue addObject:data]; // 保存数据等待就绪后发送
     } else { // 蓝牙就绪且队列已发送完
@@ -400,7 +406,8 @@
         }
         
         if (Characteristic.UUID.UUIDString == self.download_uuid) { // 如果是下发特征
-            self.write_char = Characteristic; // 保存该特征 用于下发数据
+            if (Characteristic.properties == CBCharacteristicPropertyWriteWithoutResponse)
+                self.write_char = Characteristic; // 保存该特征 用于下发数据
         }
     }
     
