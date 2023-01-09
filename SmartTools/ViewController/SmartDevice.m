@@ -80,6 +80,11 @@
     self.alert = [UIAlertController alertControllerWithTitle:@"Cconnecting" message:@"Connect device.." preferredStyle:UIAlertControllerStyleAlert];
     [self presentViewController:self.alert animated:YES completion:nil]; // 显示提示窗口
     
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 6 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{ // 超时关闭提示框
+        if (self.alert != nil)
+            [self.navigationController dismissViewControllerAnimated:YES completion:nil]; // 退出提示窗口
+    });
+    
     if (self.device.manufacture_data->uuid_flag == 0x5A) { // 使用自定义UUID
         self.service_uuid = [NSString stringWithFormat:@"%04X", self.device.manufacture_data->server_uiud];
         self.upload_uuid = [NSString stringWithFormat:@"%04X", self.device.manufacture_data->upload_uuid];
