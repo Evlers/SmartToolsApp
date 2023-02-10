@@ -2,10 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>APP需要允许蓝牙访问权限才能连接设备，您允许吗？</string>
-	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>APP需要允许蓝牙访问权限才能连接设备，您允许吗？</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -33,7 +29,5 @@
 			</array>
 		</dict>
 	</array>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
 </dict>
 </plist>

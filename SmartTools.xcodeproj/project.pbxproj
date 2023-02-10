@@ -7,20 +7,29 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		9904CBC62969219F007CF40D /* FirmwareUpgrade.m in Sources */ = {isa = PBXBuildFile; fileRef = 9904CBC52969219F007CF40D /* FirmwareUpgrade.m */; };
+		9904CBD5296D12C7007CF40D /* FirmwareUpgradeCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 9904CBD4296D12C7007CF40D /* FirmwareUpgradeCell.m */; };
+		9904CBDA296D153B007CF40D /* TableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 9904CBD9296D153B007CF40D /* TableViewCell.xib */; };
+		9904CBE0296D7429007CF40D /* SmartDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 9904CBDF296D7429007CF40D /* SmartDevice.m */; };
 		991C631729501426002098DE /* SelectDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 991C631629501426002098DE /* SelectDevice.m */; };
 		99442909294FFA320086ACA0 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 99442908294FFA320086ACA0 /* AppDelegate.m */; };
 		99442912294FFA320086ACA0 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 99442910294FFA320086ACA0 /* Main.storyboard */; };
 		99442914294FFA340086ACA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 99442913294FFA340086ACA0 /* Assets.xcassets */; };
 		99442917294FFA340086ACA0 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 99442915294FFA340086ACA0 /* LaunchScreen.storyboard */; };
 		9944291A294FFA340086ACA0 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 99442919294FFA340086ACA0 /* main.m */; };
-		99EC4389295A80F5007408C2 /* SmartDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 99EC4388295A80F5007408C2 /* SmartDevice.m */; };
+		99618F4F2995F0D8005F433B /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 99618F4E2995F0D8005F433B /* libz.tbd */; };
+		99618F512995F0E1005F433B /* libiconv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 99618F502995F0E0005F433B /* libiconv.tbd */; };
+		99618F532995F0E5005F433B /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 99618F522995F0E5005F433B /* Security.framework */; };
+		99EC4389295A80F5007408C2 /* SmartDeviceVC.m in Sources */ = {isa = PBXBuildFile; fileRef = 99EC4388295A80F5007408C2 /* SmartDeviceVC.m */; };
 		99EC438F295AE598007408C2 /* SmartProtocol.m in Sources */ = {isa = PBXBuildFile; fileRef = 99EC438E295AE598007408C2 /* SmartProtocol.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		9904CBC52969219F007CF40D /* FirmwareUpgrade.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = FirmwareUpgrade.m; path = ViewController/FirmwareUpgrade.m; sourceTree = "<group>"; };
-		9904CBC7296921E2007CF40D /* FirmwareUpgrade.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FirmwareUpgrade.h; sourceTree = "<group>"; };
+		9904CBD4296D12C7007CF40D /* FirmwareUpgradeCell.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FirmwareUpgradeCell.m; sourceTree = "<group>"; };
+		9904CBD6296D12E4007CF40D /* FirmwareUpgradeCell.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FirmwareUpgradeCell.h; sourceTree = "<group>"; };
+		9904CBD9296D153B007CF40D /* TableViewCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = TableViewCell.xib; sourceTree = "<group>"; };
+		9904CBDF296D7429007CF40D /* SmartDevice.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SmartDevice.m; sourceTree = "<group>"; };
+		9904CBE1296D7440007CF40D /* SmartDevice.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SmartDevice.h; sourceTree = "<group>"; };
+		9904CBE4296D9B14007CF40D /* SmartDeviceStandard.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SmartDeviceStandard.h; sourceTree = "<group>"; };
 		991C631529501426002098DE /* SelectDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SelectDevice.h; path = ViewController/SelectDevice.h; sourceTree = "<group>"; };
 		991C631629501426002098DE /* SelectDevice.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SelectDevice.m; path = ViewController/SelectDevice.m; sourceTree = "<group>"; };
 		99442904294FFA320086ACA0 /* SmartTools.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartTools.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -31,29 +40,46 @@
 		99442916294FFA340086ACA0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		99442918294FFA340086ACA0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		99442919294FFA340086ACA0 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		99EC4388295A80F5007408C2 /* SmartDevice.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = SmartDevice.m; path = ViewController/SmartDevice.m; sourceTree = "<group>"; };
-		99EC438B295A8566007408C2 /* SmartDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SmartDevice.h; path = ViewController/SmartDevice.h; sourceTree = "<group>"; };
+		99618F4E2995F0D8005F433B /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		99618F502995F0E0005F433B /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = usr/lib/libiconv.tbd; sourceTree = SDKROOT; };
+		99618F522995F0E5005F433B /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		99EC4388295A80F5007408C2 /* SmartDeviceVC.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = SmartDeviceVC.m; path = ViewController/SmartDeviceVC.m; sourceTree = "<group>"; };
+		99EC438B295A8566007408C2 /* SmartDeviceVC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SmartDeviceVC.h; path = ViewController/SmartDeviceVC.h; sourceTree = "<group>"; };
 		99EC438D295AE562007408C2 /* SmartProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SmartProtocol.h; sourceTree = "<group>"; };
 		99EC438E295AE598007408C2 /* SmartProtocol.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SmartProtocol.m; sourceTree = "<group>"; };
 		99EC4390295D6DAA007408C2 /* ProtocolStandard.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProtocolStandard.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		99442901294FFA320086ACA0 /* Frameworks */ = {
+		99618F442995EA1F005F433B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				99618F532995F0E5005F433B /* Security.framework in Frameworks */,
+				99618F512995F0E1005F433B /* libiconv.tbd in Frameworks */,
+				99618F4F2995F0D8005F433B /* libz.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		9904CBD3296D12A1007CF40D /* TableViewCell */ = {
+			isa = PBXGroup;
+			children = (
+				9904CBD6296D12E4007CF40D /* FirmwareUpgradeCell.h */,
+				9904CBD4296D12C7007CF40D /* FirmwareUpgradeCell.m */,
+				9904CBD9296D153B007CF40D /* TableViewCell.xib */,
+			);
+			path = TableViewCell;
+			sourceTree = "<group>";
+		};
 		994428FB294FFA320086ACA0 = {
 			isa = PBXGroup;
 			children = (
 				99442906294FFA320086ACA0 /* SmartTools */,
 				99442905294FFA320086ACA0 /* Products */,
+				99618F3E2995E990005F433B /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -68,40 +94,52 @@
 		99442906294FFA320086ACA0 /* SmartTools */ = {
 			isa = PBXGroup;
 			children = (
-				99442910294FFA320086ACA0 /* Main.storyboard */,
 				99C3158A29501210002E8E7E /* ViewController */,
-				99EC438C295AC83B007408C2 /* SmartProtocol */,
+				99EC438C295AC83B007408C2 /* Device */,
 				99442907294FFA320086ACA0 /* AppDelegate.h */,
 				99442908294FFA320086ACA0 /* AppDelegate.m */,
 				99442913294FFA340086ACA0 /* Assets.xcassets */,
 				99442915294FFA340086ACA0 /* LaunchScreen.storyboard */,
 				99442918294FFA340086ACA0 /* Info.plist */,
+				99442910294FFA320086ACA0 /* Main.storyboard */,
 				99442919294FFA340086ACA0 /* main.m */,
 			);
 			path = SmartTools;
 			sourceTree = "<group>";
 		};
+		99618F3E2995E990005F433B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				99618F522995F0E5005F433B /* Security.framework */,
+				99618F502995F0E0005F433B /* libiconv.tbd */,
+				99618F4E2995F0D8005F433B /* libz.tbd */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		99C3158A29501210002E8E7E /* ViewController */ = {
 			isa = PBXGroup;
 			children = (
+				9904CBD3296D12A1007CF40D /* TableViewCell */,
 				991C631529501426002098DE /* SelectDevice.h */,
 				991C631629501426002098DE /* SelectDevice.m */,
-				99EC438B295A8566007408C2 /* SmartDevice.h */,
-				99EC4388295A80F5007408C2 /* SmartDevice.m */,
-				9904CBC7296921E2007CF40D /* FirmwareUpgrade.h */,
-				9904CBC52969219F007CF40D /* FirmwareUpgrade.m */,
+				99EC438B295A8566007408C2 /* SmartDeviceVC.h */,
+				99EC4388295A80F5007408C2 /* SmartDeviceVC.m */,
 			);
 			name = ViewController;
 			sourceTree = "<group>";
 		};
-		99EC438C295AC83B007408C2 /* SmartProtocol */ = {
+		99EC438C295AC83B007408C2 /* Device */ = {
 			isa = PBXGroup;
 			children = (
+				99EC4390295D6DAA007408C2 /* ProtocolStandard.h */,
 				99EC438D295AE562007408C2 /* SmartProtocol.h */,
 				99EC438E295AE598007408C2 /* SmartProtocol.m */,
-				99EC4390295D6DAA007408C2 /* ProtocolStandard.h */,
+				9904CBE4296D9B14007CF40D /* SmartDeviceStandard.h */,
+				9904CBE1296D7440007CF40D /* SmartDevice.h */,
+				9904CBDF296D7429007CF40D /* SmartDevice.m */,
 			);
-			path = SmartProtocol;
+			path = Device;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -112,8 +150,8 @@
 			buildConfigurationList = 9944291D294FFA340086ACA0 /* Build configuration list for PBXNativeTarget "SmartTools" */;
 			buildPhases = (
 				99442900294FFA320086ACA0 /* Sources */,
-				99442901294FFA320086ACA0 /* Frameworks */,
 				99442902294FFA320086ACA0 /* Resources */,
+				99618F442995EA1F005F433B /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -162,6 +200,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				99442917294FFA340086ACA0 /* LaunchScreen.storyboard in Resources */,
+				9904CBDA296D153B007CF40D /* TableViewCell.xib in Resources */,
 				99442914294FFA340086ACA0 /* Assets.xcassets in Resources */,
 				99442912294FFA320086ACA0 /* Main.storyboard in Resources */,
 			);
@@ -177,9 +216,10 @@
 				99EC438F295AE598007408C2 /* SmartProtocol.m in Sources */,
 				991C631729501426002098DE /* SelectDevice.m in Sources */,
 				99442909294FFA320086ACA0 /* AppDelegate.m in Sources */,
+				9904CBD5296D12C7007CF40D /* FirmwareUpgradeCell.m in Sources */,
 				9944291A294FFA340086ACA0 /* main.m in Sources */,
-				99EC4389295A80F5007408C2 /* SmartDevice.m in Sources */,
-				9904CBC62969219F007CF40D /* FirmwareUpgrade.m in Sources */,
+				99EC4389295A80F5007408C2 /* SmartDeviceVC.m in Sources */,
+				9904CBE0296D7429007CF40D /* SmartDevice.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -327,7 +367,9 @@
 				DEVELOPMENT_TEAM = F5V6SHSAQ4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SmartTools/Info.plist;
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "APP想使用蓝牙连接外围设备";
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "APP需要允许蓝牙访问权限才能连接设备，您允许吗？";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "APP需要允许蓝牙访问权限才能连接设备，您允许吗？";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
@@ -338,7 +380,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "LGT.SmartTools-1-6";
+				PRODUCT_BUNDLE_IDENTIFIER = "LGT.SmartTools-1-7";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -355,7 +397,9 @@
 				DEVELOPMENT_TEAM = F5V6SHSAQ4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SmartTools/Info.plist;
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "APP想使用蓝牙连接外围设备";
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "APP需要允许蓝牙访问权限才能连接设备，您允许吗？";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "APP需要允许蓝牙访问权限才能连接设备，您允许吗？";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
@@ -366,7 +410,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "LGT.SmartTools-1-6";
+				PRODUCT_BUNDLE_IDENTIFIER = "LGT.SmartTools-1-7";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";

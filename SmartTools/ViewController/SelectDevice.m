@@ -6,16 +6,9 @@
 //
 
 #import "SelectDevice.h"
-#import "SmartProtocol.h"
 #import "SmartDevice.h"
-
-@implementation ProductInfo
-
-@end
-
-@implementation Device
-
-@end
+#import "SmartProtocol.h"
+#import "SmartDeviceVC.h"
 
 @interface SelectDevice () <UITableViewDelegate, UITableViewDataSource, CBCentralManagerDelegate>
 
@@ -26,7 +19,7 @@
 @property (nonatomic, strong) NSMutableArray<Device *> *device;
 @property (nonatomic, strong) UIActivityIndicatorView *indicatorView;
 
-@property (nonatomic, strong) SmartDevice *device_view;
+@property (nonatomic, strong) SmartDeviceVC *device_view;
 
 @end
 
@@ -51,9 +44,9 @@
     self.table.dataSource = self;            // 设置数据源
     
     // 配置扫描动画
-    self.indicatorView = [[UIActivityIndicatorView alloc]initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
-    self.indicatorView.center = CGPointMake(90, 35);
-    [self.table addSubview:self.indicatorView];
+//    self.indicatorView = [[UIActivityIndicatorView alloc]initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
+//    self.indicatorView.center = CGPointMake(10, 10);
+//    [self.table addSubview:self.indicatorView];
     
     self.device = [NSMutableArray array]; // 创建用于储存设备的可变数组
     
@@ -74,7 +67,7 @@
 -(void)DownPullUpdate:(UIRefreshControl *)refc {
     if(self.centralManager.state == CBManagerStatePoweredOn){
         [self.centralManager stopScan];//停止扫描
-        [self.indicatorView stopAnimating];
+//        [self.indicatorView stopAnimating];
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 500 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
             while (self.device.count) {//删除所有搜索到的设备
                 NSIndexPath *IndexPath = [NSIndexPath indexPathForRow:self.device.count-1 inSection:0];//设定行数
@@ -85,7 +78,7 @@
             [refc endRefreshing];//停止更新
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 100 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
                 [self.centralManager scanForPeripheralsWithServices:nil options:nil]; // 搜索周围所有蓝牙设备
-                [self.indicatorView startAnimating];
+//                [self.indicatorView startAnimating];
             });
         });
     }
@@ -96,16 +89,21 @@
 
 // 已经进入界面
 -(void)viewDidAppear:(BOOL)animated {
+    
+    self.centralManager.delegate = self; // 夺回中心管理器的代理
+    [self.centralManager scanForPeripheralsWithServices:nil options:nil]; // 继续扫描设备
     if (self.device.count && [self.device objectAtIndex:self.table.indexPathForSelectedRow.row].peripheral.state == CBPeripheralStateConnected) {//若果设备已经连接
         [self.centralManager cancelPeripheralConnection:[self.device objectAtIndex:self.table.indexPathForSelectedRow.row].peripheral];//断开连接
     }
+    [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
 }
 
 #pragma mark -- TableView 接口
 
 // Tableview接口: 返回组头数据
 -(NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
-    return @"选择设备..";
+//    return @"Select device..";
+    return nil;
 }
 
 // Tableview接口: 返回行数
@@ -115,42 +113,43 @@
 
 // Tableview接口: 返回每行的数据
 -(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    UITableViewCell *cell;
+    
     NSString *identifier = [NSString stringWithFormat:@"cell %ld %ld",(long)indexPath.section,(long)indexPath.row]; // 生成队列ID
-    cell = [tableView dequeueReusableCellWithIdentifier:identifier]; // 通过队列ID出列Cell
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier]; // 通过队列ID出列Cell
     
-    if(cell == NULL) // 没有创建过此Cell
+    if(cell == nil) { // 没有创建过此Cell
         cell = [[UITableViewCell alloc]initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:identifier]; // 创建新的Cell
+    }
     
-    // 组合设备名
     uint8_t *dev_id = [self.device objectAtIndex:indexPath.row].manufacture_data->device_id;
     uint8_t capacity = [self.device objectAtIndex:indexPath.row].manufacture_data->capacity_value * 0.5 + 1.5; // 计算电池容量
     NSString *dev_name = [NSString stringWithFormat:@"%@ %dAH #%02X%02X",
                           [self.device objectAtIndex:indexPath.row].product_info.default_name, capacity, dev_id[0], dev_id[1]];
-    
     // 配置显示数据
     cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator; // 右侧有箭头的行
     cell.textLabel.text = dev_name;
-    cell.imageView.image = [UIImage imageNamed:[NSString stringWithFormat:@"smartBatteryPackage"]];
+    cell.imageView.image = [UIImage imageNamed:[NSString stringWithFormat:@"BatPack%d.0", capacity]];
+    // 调整图片大小
+    CGSize itemSize = CGSizeMake(50, 50);
+    UIGraphicsBeginImageContextWithOptions(itemSize, NO, UIScreen.mainScreen.scale);
+    CGRect imageRect = CGRectMake(0.0, 0.0, itemSize.width, itemSize.height);
+    [cell.imageView.image drawInRect:imageRect];
+    cell.imageView.image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+
     cell.detailTextLabel.text = [self.device objectAtIndex:indexPath.row].peripheral.identifier.UUIDString;
+    
     return cell;
 }
 
 // Tableview接口:选中设备
 -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    [self.centralManager connectPeripheral:[self.device objectAtIndex:indexPath.row].peripheral options:nil]; // 连接设备
     
+    UIStoryboard *mainStory = [UIStoryboard storyboardWithName:@"Main" bundle:nil]; // 获取XIB文件
+    self.device_view = [mainStory instantiateViewControllerWithIdentifier:@"DeviceView"]; // 获取试图控制器
     self.device_view.device = [self.device objectAtIndex:indexPath.row]; // 传递设备信息到设备窗口
+    self.device_view.centralManager = self.centralManager; // 提供中心管理器的控制权
     [self.navigationController pushViewController:self.device_view animated:YES]; // 跳转到设备窗口
-    
-    self.connectFailedBlock = dispatch_block_create(DISPATCH_BLOCK_BARRIER , ^{ // 创建超时处理的定时任务
-        if([self.device objectAtIndex:indexPath.row].peripheral.state != CBPeripheralStateConnected){ // 如果没有连接
-            [self.centralManager cancelPeripheralConnection:[self.device objectAtIndex:indexPath.row].peripheral]; // 取消连接
-            [self.navigationController popViewControllerAnimated:YES]; // 返回上一个窗口
-            [self.table deselectRowAtIndexPath:indexPath animated:YES]; // 取消选中
-        }
-    });
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC), dispatch_get_main_queue(), self.connectFailedBlock); // 5秒后进入超时处理
 }
 
 - (void)didReceiveMemoryWarning {
@@ -193,7 +192,11 @@
         CBPeripheral *tempPeripheral = self.device[i].peripheral;
         if ([peripheral.identifier.UUIDString isEqualToString:tempPeripheral.identifier.UUIDString]) {
             [self.device replaceObjectAtIndex:i withObject:device];//更新数组中的数据
-            break;
+            [UIView performWithoutAnimation:^{ // 无动画
+                NSIndexPath *index = [NSIndexPath indexPathForRow:i inSection:0];
+                [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:index] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
+            }];
+            return ;
         }
     }
     
@@ -205,26 +208,10 @@
     }
 }
 
-// 连接失败
--(void)centralManager:(CBCentralManager *)central didFailToConnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
-    [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES];//取消选中
-    dispatch_block_cancel(self.connectFailedBlock); // 取消超时任务
-    NSLog(@"Connect to %@ failed", error);
-}
-
 // 断开连接
--(void)centralManager:(CBCentralManager *)central didDisconnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
-    [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES];//取消选中
-    [self.device_view disconnect]; // 断开连接
-    dispatch_block_cancel(self.connectFailedBlock); // 取消超时任务
+- (void)centralManager:(CBCentralManager *)central didDisconnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
+    
     NSLog(@"Disconnect is %@", peripheral.name);
-}
-
-// 已经连接设备
--(void)centralManager:(CBCentralManager *)central didConnectPeripheral:(CBPeripheral *)peripheral {
-    [self.device_view connected]; // 设备已连接
-    dispatch_block_cancel(self.connectFailedBlock); // 取消超时任务
-    NSLog(@"Connected to %@", peripheral.name);
 }
 
 @end
