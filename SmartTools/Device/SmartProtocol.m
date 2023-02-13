@@ -135,6 +135,11 @@
 
 // 发送数据帧
 - (void)send_frame_with_fcb:(uint8_t)fcb body:(protocol_body_t *)body {
+    [self send_frame_with_fcb:fcb body:body timeout:REPLY_TIMEOUT_VALUE]; // 使用默认超时时间进行数据发送
+}
+
+// 发送数据帧
+- (void)send_frame_with_fcb:(uint8_t)fcb body:(protocol_body_t *)body timeout:(NSInteger)timeout {
     protocol_frame_t frame;
     
     if (body->len > BODY_DATA_MAX_LEN) {
@@ -184,14 +189,14 @@
                 NSLog(@"Smart protocol try (%d) send seq %d, code %d, data:%@", record.try_cnt + 1, record.seq, record.code, send_data);
                 [self.delegate SmartProtocolDataSend:send_data]; // 重新发送数据
                 record.try_cnt ++;
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, REPLY_TIMEOUT_VALUE * NSEC_PER_MSEC), dispatch_get_main_queue(), record.block);
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, timeout * NSEC_PER_MSEC), dispatch_get_main_queue(), record.block);
 
             } else { // 重发次数超出未收到应答
                 [self.queue removeObject:record]; // 删除该指令记录
                 NSLog(@"Smart protocol frame no response, seq %d, code %d discarded", record.seq, record.code);
             }
         });
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, REPLY_TIMEOUT_VALUE * NSEC_PER_MSEC), dispatch_get_main_queue(), record.block);
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, timeout * NSEC_PER_MSEC), dispatch_get_main_queue(), record.block);
 //        NSLog(@"Download seq: %d, code: %d", body->seq, body->code);
     }
     

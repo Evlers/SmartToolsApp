@@ -12,11 +12,6 @@
 #import "CoreBluetooth/CoreBluetooth.h"
 #import "SmartDeviceStandard.h"
 
-typedef NS_ENUM(NSInteger, FirmwareFileType) {
-    FirmwareFileTypeBootloader = 0,
-    FirmwareFileTypeAppliction,
-    FirmwareFileTypeSubDev,
-};
 
 #pragma pack(push)
 #pragma pack(1)     // 字节对齐
@@ -49,17 +44,6 @@ typedef struct
 @property (nonatomic, strong) ProductInfo *product_info;            // 产品信息
 @property (nonatomic, strong) CBPeripheral *peripheral;             // 蓝牙外围设备
 @property (nonatomic, assign) manufacture_data_t *manufacture_data; // 厂商自定义数据
-
-@end
-
-@interface FirmwareFile : NSObject
-
-@property (nonatomic, strong) NSFileHandle      *file;              // 固件文件
-@property (nonatomic, strong) NSData            *file_data;         // 文件数据
-@property (nonatomic, assign) FirmwareFileType  type;               // 固件文件类型
-@property (nonatomic, assign) NSInteger         crc32;              // 文件CRC32校验值
-@property (nonatomic, strong) NSData            *md5;               // 文件MD5校验值
-@property (nonatomic, strong) NSString          *version;           // 固件文件版本
 
 @end
 

@@ -7,12 +7,12 @@
 
 #import <Foundation/Foundation.h>
 #import <CommonCrypto/CommonCryptor.h>
+#import <CommonCrypto/CommonCrypto.h>
+#import <zlib.h>
 #import "SmartProtocol.h"
 #import "SmartDevice.h"
-#import <zlib.h>
-#import "SSZipArchive.h"
-#import <CommonCrypto/CommonCrypto.h>
 #import "Utility.h"
+#import "FirmwareFile.h"
 
 #define DEFAULT_SERVIICE_UUID       @"FFF0"
 #define DEFAULT_UPLOAD_UUID         @"FFF1"
@@ -24,10 +24,6 @@
 @end
 
 @implementation Device
-
-@end
-
-@implementation FirmwareFile
 
 @end
 
@@ -117,23 +113,17 @@
     self.firmwareUpgrade.firmware = [NSMutableArray array];
     
     NSData *pid;
-    if ([self decodeUpgrqadeFile:filePath pid:&pid firmware:self.firmwareUpgrade.firmware] == false) {
+    if ([FirmwareFile decodeUpgrqadeFile:filePath pid:&pid firmware:self.firmwareUpgrade.firmware] == false) {
         NSLog(@"Firmware file %@ analysis error !", filePath);
         return false;
     }
-    self.firmwareUpgrade.pid = pid;
+    self.firmwareUpgrade.pid = pid; // 保存升级文件的PID
     [self sendUpgradeRequest]; // 发送升级请求
-    
-    NSFileManager *fileManage = [NSFileManager defaultManager];
-    if ([fileManage removeItemAtPath:filePath error:nil]) {
-        NSLog(@"Delete file success");
-    } else {
-        NSLog(@"Delete file failed!");
-    }
     
     return true;
 }
 
+// 发送升级请求
 - (void)sendUpgradeRequest {
     ota_upgrade_request_t ota_upgrade_request;
     protocol_body_t body;
@@ -148,163 +138,6 @@
     
     [self.smart_protocol send_frame_with_fcb:FCB_DEFAULT body:&body]; // 发送升级请求
     free(body.data);
-}
-
-- (bool)decodeUpgrqadeFile:(NSString *)filePath pid:(NSData **)pid firmware:(NSMutableArray *)firmware {
-    NSString *cachesPath = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES)lastObject]; // caches路径
-    NSString *folderPath = [cachesPath stringByAppendingPathComponent:@"FirmwareFile"]; // 解压目标路径
-    NSData *manifest_data = nil;
-    
-    if (![SSZipArchive unzipFileAtPath:filePath toDestination:folderPath]) { // 解压该文件到caches中的firmwareFile目录
-        NSLog(@"Zip file decompress failed !");
-        return false;
-    }
-    
-    NSMutableArray *upgradeFile = [NSMutableArray array];
-    [Utility readAllFileInfo:upgradeFile folderPath:folderPath]; // 读取所有文件信息
-    
-    for (FileInfo *info in upgradeFile) { // 读取压缩文件中的文件
-        if ([info.name isEqualToString:@"manifest.json"]) { // 检查是否存在清单 Json文件
-            NSFileHandle *file = [NSFileHandle fileHandleForReadingAtPath:info.path]; // 打开Json文件
-            manifest_data = [file readDataToEndOfFile]; // 读取文件数据
-            break;
-        }
-    }
-    
-    if (manifest_data == nil) {
-        NSLog(@"The manifest object does not exist");
-        return false;
-    }
-    
-    // JSON 数据解析
-    NSError *error;
-    NSDictionary *root = [NSJSONSerialization JSONObjectWithData:manifest_data options:NSJSONReadingMutableContainers error:&error];
-    if (error != nil) {
-        NSLog(@"Json format error: %@", error);
-    }
-    
-    NSDictionary *manifest = root[@"manifest"];
-    if (manifest == nil) {
-        NSLog(@"The manifest object does not exist");
-        return false;
-    }
-    
-    NSString *pid_str;
-    if ((pid_str = manifest[@"pid"]) == nil) {
-        NSLog(@"Product ID not found in upgrade file!");
-        return false;
-    }
-    *pid = [Utility HexStringToData:pid_str];
-    
-    NSDictionary *bootloader = manifest[@"bootloader"];
-    if (bootloader == nil) {
-        NSLog(@"The bootloader object does not exist");
-    }
-    
-    NSDictionary *application = manifest[@"application"];
-    if (application == nil) {
-        NSLog(@"The application object does not exist");
-    }
-    
-    if (bootloader == nil && application == nil) { // Bootloader 以及 application 固件都没识别到
-        NSLog(@"No bootloader or appliction upgrade object found");
-        return false;
-    }
-    
-    if (bootloader) {
-        NSString *fileName = bootloader[@"file"];
-        if (fileName == nil) {
-            NSLog(@"Bootloader file object does not exist !");
-            bootloader = nil;
-            goto _bootloader_exit;
-        }
-        for (FileInfo *info in upgradeFile) { // 读取压缩文件中的文件
-            if ([info.name isEqualToString:fileName]) {
-                FirmwareFile *firmwareFile = [FirmwareFile alloc];
-                
-                firmwareFile.file = [NSFileHandle fileHandleForReadingAtPath:info.path]; // 打开固件准备读取
-                if (firmwareFile.file == nil) {
-                    NSLog(@"Firmware file open failed: %@", filePath);
-                    goto _bootloader_exit;
-                }
-                
-                firmwareFile.version = bootloader[@"version"]; // 读取版本号
-                firmwareFile.crc32 = [((NSString *)bootloader[@"crc32"]) integerValue]; // 读取CRC32校验值
-                firmwareFile.md5 = [Utility HexStringToData:(NSString *)bootloader[@"md5"]]; // 读取MD5校验值
-                firmwareFile.file_data = [firmwareFile.file readDataToEndOfFile]; // 读取文件数据
-                firmwareFile.type = FirmwareFileTypeBootloader;
-                // 校验固件是否正确
-                uint8_t md5[16];
-                uint32_t crc32_value = (uint32_t)crc32(0, firmwareFile.file_data.bytes, (uint32_t)firmwareFile.file_data.length);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations" // 忽略MD5已被IOS 13.0以上版本弃用的警告
-                CC_MD5(firmwareFile.file_data.bytes, (uint32_t)firmwareFile.file_data.length, md5);
-#pragma clang diagnostic pop
-                if (memcmp(md5, firmwareFile.md5.bytes, sizeof(md5)) != 0) {
-                    NSLog(@"The bootloader firmware file verification in the upgrade file is incorrect!");
-                    NSData *md5_ns = [[NSData alloc]initWithBytes:md5 length:sizeof(md5)];
-                    NSLog(@"md5: %@ %@", md5_ns, firmwareFile.md5);
-                    NSLog(@"crc32: %u %lu", crc32_value, firmwareFile.crc32);
-                    goto _bootloader_exit;
-                }
-                
-                [firmware addObject:firmwareFile];
-                break;
-            }
-        }
-    }
-    _bootloader_exit:
-    
-    if (application) {
-        NSString *fileName = application[@"file"];
-        if (fileName == nil) {
-            NSLog(@"Application file object does not exist !");
-            application = nil;
-            goto _appliction_exit;
-        }
-        for (FileInfo *info in upgradeFile) { // 读取压缩文件中的文件
-            if ([info.name isEqualToString:fileName]) {
-                FirmwareFile *firmwareFile = [FirmwareFile alloc];
-                
-                firmwareFile.file = [NSFileHandle fileHandleForReadingAtPath:info.path]; // 打开固件准备读取
-                if (firmwareFile.file == nil) {
-                    NSLog(@"Firmware file open failed: %@", filePath);
-                    goto _appliction_exit;
-                }
-                
-                firmwareFile.version = application[@"version"]; // 读取版本号
-                firmwareFile.crc32 = [((NSString *)application[@"crc32"]) integerValue]; // 读取CRC32校验值
-                firmwareFile.md5 = [Utility HexStringToData:(NSString *)application[@"md5"]]; // 读取MD5校验值
-                firmwareFile.file_data = [firmwareFile.file readDataToEndOfFile]; // 读取文件数据
-                firmwareFile.type = FirmwareFileTypeAppliction;
-                // 校验固件是否正确
-                uint8_t md5[16];
-                uint32_t crc32_value = (uint32_t)crc32(0, firmwareFile.file_data.bytes, (uint32_t)firmwareFile.file_data.length);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations" // 忽略MD5已被IOS 13.0以上版本弃用的警告
-                CC_MD5(firmwareFile.file_data.bytes, (uint32_t)firmwareFile.file_data.length, md5);
-#pragma clang diagnostic pop
-                
-                if (memcmp(md5, firmwareFile.md5.bytes, sizeof(md5)) != 0 || crc32_value != firmwareFile.crc32) {
-                    NSLog(@"The application firmware file verification in the upgrade file is incorrect!");
-                    NSData *md5_ns = [[NSData alloc]initWithBytes:md5 length:sizeof(md5)];
-                    NSLog(@"md5: %@ %@", md5_ns, firmwareFile.md5);
-                    NSLog(@"crc32: %u %lu", crc32_value, firmwareFile.crc32);
-                    goto _appliction_exit;
-                }
-                
-                [firmware addObject:firmwareFile];
-                break;
-            }
-        }
-    }
-    _appliction_exit:
-    
-    if (firmware.count == 0) {
-        return false;
-    }
-    
-    return true;
 }
 
 #pragma mark -- Smart battery package protocool interface
@@ -367,7 +200,7 @@
                 memcpy(res_body.data, &ota_upgrade_file_info, sizeof(ota_upgrade_file_info));
                 
                 NSData *md5_data = [NSData dataWithBytes:ota_upgrade_file_info.md5 length:sizeof(ota_upgrade_file_info.md5)];
-                NSLog(@"CRC32: 0x%08X, MD5: %@", ota_upgrade_file_info.crc32, md5_data);
+                NSLog(@"Firmware file CRC32: 0x%08X, MD5: %@", ota_upgrade_file_info.crc32, md5_data);
                 NSLog(@"The firmware upgrade request has been responded to");
 //            }
             upgradeState = SmartDeviceUpgradeStateResponseRequest;
@@ -453,7 +286,11 @@
     }
     
     if (result == 0 && code != SP_CODE_UPGRADE_END) { // 应答成功状态才需要继续发送数据
-        [self.smart_protocol send_frame_with_fcb:FCB_DEFAULT body:&res_body];
+        if (res_body.code == SP_CODE_UPGRADE_FILE_INFO) { // 将发送固件文件信息
+            [self.smart_protocol send_frame_with_fcb:FCB_DEFAULT body:&res_body timeout:10000]; // 发送文件信息后，芯片需要点时间进行Flash擦除
+        } else {
+            [self.smart_protocol send_frame_with_fcb:FCB_DEFAULT body:&res_body];
+        }
     }
     
     if (self.delegate && [self.delegate respondsToSelector:@selector(smartDeviceUpgradeStateUpdate:withResult:)]) {

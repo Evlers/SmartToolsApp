@@ -20,7 +20,7 @@
     
     if (![manager fileExistsAtPath:folderPath]) return; // 检查目录是否存在
     
-    NSEnumerator *childFilesEnumerator = [[manager subpathsAtPath:folderPath] objectEnumerator]; // 从前向后枚举器
+    NSEnumerator *childFilesEnumerator = [[manager subpathsAtPath:folderPath] reverseObjectEnumerator]; // 反向枚举器
     
     NSString *fileName = nil;
     while ((fileName = [childFilesEnumerator nextObject]) != nil) { // 使用枚举器,遍历所有文件
