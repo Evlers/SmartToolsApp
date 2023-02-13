@@ -10,6 +10,8 @@
 #import "SmartDevice.h"
 #import "SmartDeviceVC.h"
 #import "FirmwareUpgradeCell.h"
+#import "Utility.h"
+#import "SSZipArchive.h"
 
 @implementation DataPoint
 
@@ -33,10 +35,6 @@
     self.accessoryType = UITableViewCellAccessoryNone;
     return self;
 }
-
-@end
-
-@implementation FileInfo
 
 @end
 
@@ -66,21 +64,24 @@
     self.table.dataSource = self;
     
     self.allFileInfo = [NSMutableArray array];
-    [self readAllFileInfo:self.allFileInfo];
+    NSString *inboxPath = [NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/Inbox/"]]; // 总文件夹
+    [Utility readAllFileInfo:self.allFileInfo folderPath:inboxPath]; // 读取该文件夹下的所有文件信息
     
-    if (self.allFileInfo.count) {
-        FileInfo *file = [self.allFileInfo objectAtIndex:0];
-        NSFileHandle *f = [NSFileHandle fileHandleForReadingAtPath:file.path];
-        if (f == nil) {
-            NSLog(@"file path error: %@", file.path);
-        } else {
-            NSLog(@"file path open success: %@", file.path);
-        }
-    }
-    
-    if (self.allFileInfo.count) {
-        
-    }
+    // SSZipArchive: https://github.com/ZipArchive/ZipArchive
+//    for (FileInfo *info in self.allFileInfo) { // 遍历文件
+//        if ([info.path hasSuffix:@".zip"]) { // zip文件
+//            NSString *cachesPath = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES)lastObject]; // caches路径
+//            NSString *path = [cachesPath stringByAppendingPathComponent:@"firmwareFile"]; // 解压目标路径
+//            if ([SSZipArchive unzipFileAtPath:info.path toDestination:path]) { // 解压该文件到caches中的firmwareFile目录
+//                NSLog(@"file path: %@\r\n%@", info.path, path);
+//                NSMutableArray *firmwareFile = [NSMutableArray array];
+//                [Utility readAllFileInfo:firmwareFile folderPath:path];
+//                for (FileInfo *info in firmwareFile) {
+//                    NSLog(@"name: %@ size: %lu", info.name, info.size);
+//                }
+//            }
+//        }
+//    }
     
     NSLog(@"Smart device view init done");
 }
@@ -140,29 +141,6 @@
 // 已经离开此页面
 - (void)viewDidDisappear:(BOOL)animated {
     [self.smart_device disconnectDevice]; // 断开设备连接
-}
-
-- (void)readAllFileInfo:(NSMutableArray *)file {
-    NSFileManager *manager = [NSFileManager defaultManager]; // 文件管理器
-    NSString *folderPath = [NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/Inbox/"]]; // 总文件夹
-    
-    if (![manager fileExistsAtPath:folderPath]) return; // 检查改目录是否存在
-    
-    NSEnumerator *childFilesEnumerator = [[manager subpathsAtPath:folderPath] objectEnumerator]; // 从前向后枚举器
-    
-    NSString *fileName = nil;
-    while ((fileName = [childFilesEnumerator nextObject]) != nil) { // 使用枚举器,遍历所有文件
-        NSDictionary *fileAttributes = [manager attributesOfItemAtPath:[folderPath stringByAppendingPathComponent:fileName] error:nil];
-        
-        FileInfo *file_info = [FileInfo alloc];
-        file_info.name = fileName; // 文件名
-        file_info.date = [fileAttributes objectForKey:@"NSFileCreationDate"]; // 文件创建日期
-        file_info.size = [[fileAttributes objectForKey:@"NSFileSize"] integerValue]; // 文件大小
-        file_info.owner = [fileAttributes objectForKey:@"NSFileGroupOwnerAccountName"]; // 所有权用户
-        file_info.path = [folderPath stringByAppendingPathComponent:fileName]; // 文件完整路径
-        
-        [file addObject:file_info]; // 添加到所有文件可变数组中
-    }
 }
 
 #pragma mark -- TableView 接口
@@ -245,6 +223,16 @@
 // 开始固件升级
 - (void)startFirmwareUpgrade {
     
+    NSString *FirmwareFilePath = nil;
+    for (FileInfo *info in self.allFileInfo) { // 遍历文件
+        if ([info.path hasSuffix:@".zip"]) // zip文件
+            FirmwareFilePath = info.path;
+    }
+    if (FirmwareFilePath == nil) {
+        NSLog(@"No upgrade file found");
+        return ;
+    }
+    
     NSLog(@"Start firmware upgrade.");
     self.alertFirmwareUpgrade = [UIAlertController alertControllerWithTitle:@"updating..." message:nil preferredStyle:UIAlertControllerStyleAlert];
     
@@ -253,10 +241,11 @@
     self.upgradeProgress.progress = 0;
     [self.alertFirmwareUpgrade.view addSubview:self.upgradeProgress];
     
-    [self presentViewController:self.alertFirmwareUpgrade animated:YES completion:nil]; // 显示升级提示框
+    if ([self.smart_device startFirmwareUpgrade:FirmwareFilePath] == false) {// 开始升级智能设备
+        return ;
+    }
     
-    NSData *pid = [NSData dataWithBytes:self.device.manufacture_data->product_id length:sizeof(self.device.manufacture_data->product_id)];
-    [self.smart_device startFirmwareUpgrade:((FileInfo *)[self.allFileInfo objectAtIndex:0]).path pid:pid version:@"v1.0.0"]; // 开始升级
+    [self presentViewController:self.alertFirmwareUpgrade animated:YES completion:nil]; // 显示升级提示框
 }
 
 // 设备固件升级状态更新

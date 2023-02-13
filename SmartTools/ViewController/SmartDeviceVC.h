@@ -22,16 +22,6 @@
 
 @end
 
-@interface FileInfo : NSObject
-
-@property (nonatomic, strong) NSString  *name;
-@property (nonatomic, strong) NSDate    *date;
-@property (nonatomic, assign) NSInteger size;
-@property (nonatomic, strong) NSString  *owner;
-@property (nonatomic, strong) NSString  *path;
-
-@end
-
 @interface SmartDeviceVC : UIViewController
 
 @property (nonatomic, strong) CBCentralManager *centralManager;

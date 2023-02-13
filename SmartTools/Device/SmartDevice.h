@@ -12,6 +12,12 @@
 #import "CoreBluetooth/CoreBluetooth.h"
 #import "SmartDeviceStandard.h"
 
+typedef NS_ENUM(NSInteger, FirmwareFileType) {
+    FirmwareFileTypeBootloader = 0,
+    FirmwareFileTypeAppliction,
+    FirmwareFileTypeSubDev,
+};
+
 #pragma pack(push)
 #pragma pack(1)     // 字节对齐
 
@@ -46,14 +52,23 @@ typedef struct
 
 @end
 
-@interface FirmwareUpgrade : NSObject
+@interface FirmwareFile : NSObject
 
-@property (nonatomic, strong) NSData            *pid;               // 升级文件的产品ID
 @property (nonatomic, strong) NSFileHandle      *file;              // 固件文件
 @property (nonatomic, strong) NSData            *file_data;         // 文件数据
+@property (nonatomic, assign) FirmwareFileType  type;               // 固件文件类型
+@property (nonatomic, assign) NSInteger         crc32;              // 文件CRC32校验值
+@property (nonatomic, strong) NSData            *md5;               // 文件MD5校验值
+@property (nonatomic, strong) NSString          *version;           // 固件文件版本
+
+@end
+
+@interface FirmwareUpgrade : NSObject
+
+@property (nonatomic, strong) NSMutableArray    *firmware;          // 固件文件信息数组
+@property (nonatomic, strong) NSData            *pid;               // 升级文件的产品ID
 @property (nonatomic, assign) NSInteger         fileOffset;         // 文件偏移
 @property (nonatomic, strong) NSString          *currentVersiion;   // 当前固件版本
-@property (nonatomic, strong) NSString          *firmwareVersion;   // 固件文件版本
 @property (nonatomic, assign) NSInteger         dataTransLength;    // 数据传输长度
 
 @end
@@ -72,7 +87,7 @@ typedef struct
 - (void)disconnectDevice;
 
 // 开始固件升级
-- (bool)startFirmwareUpgrade:(NSString *)filePath pid:(NSData *)pid version:(NSString *)version;
+- (bool)startFirmwareUpgrade:(NSString *)filePath;
 
 @end
 

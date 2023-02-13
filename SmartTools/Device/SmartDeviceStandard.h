@@ -19,7 +19,7 @@ typedef NS_ENUM(NSInteger, SmartDeviceState) {
     SmartDeviceBLEDisconnected,
     SmartDeviceConnectTimeout,
     SmartDeviceConnectSuccess,
-} NS_ENUM_AVAILABLE(10_13, 10_0);
+};
 
 typedef NS_ENUM(NSInteger, SmartDeviceUpgradeState) {
     SmartDeviceUpgradeStateResponseRequest = 0,
@@ -28,7 +28,7 @@ typedef NS_ENUM(NSInteger, SmartDeviceUpgradeState) {
     SmartDeviceUpgradeStateTransData,
     SmartDeviceUpgradeStateEnd,
     SmartDeviceUpgradeStateTimeout
-} NS_ENUM_AVAILABLE(10_13, 10_0);
+};
 
 @protocol SmartDeviceDelegate <NSObject>
 
