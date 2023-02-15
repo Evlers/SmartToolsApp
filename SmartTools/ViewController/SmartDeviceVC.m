@@ -210,29 +210,43 @@
 // 提示更新信息
 - (void)promptUpdateInformation {
     
-    NSMutableArray *firmwareFileInfo = [NSMutableArray array];
-    if ([FirmwareFile decodeUpgrqadeFile:self.upgradeFile.path pid:nil firmware:firmwareFileInfo] == false) {
+    Firmware *firmware = [[Firmware alloc]initWithLoadFirmware:self.upgradeFile.path];
+    if (firmware == nil) {
         NSLog(@"Failed to parse the upgrade file: %@", self.upgradeFile.path);
         return ;
     }
     
-    NSString *msg = [NSMutableString stringWithFormat:@"File: %@\n", self.upgradeFile.name];
-    for (FirmwareFile *firmware in firmwareFileInfo) {
-        if ([firmwareFileInfo indexOfObject:firmware] != 0) {
-            msg = [msg stringByAppendingString:@"\n"];
+    // 设置消息内容
+    NSString *msg = [NSMutableString stringWithFormat:@""];
+    for (FirmwareFile *bin_file in firmware.bin_file) {
+        if (bin_file.type == FirmwareFileTypeAppliction) {
+            msg = [msg stringByAppendingFormat:@"Application version: %@", bin_file.version];
+        } else if (bin_file.type == FirmwareFileTypeBootloader) {
+            msg = [msg stringByAppendingFormat:@"Bootloader version: %@", bin_file.version];
         }
-        if (firmware.type == FirmwareFileTypeAppliction) {
-            msg = [msg stringByAppendingFormat:@"Application version: %@", firmware.version];
-        } else if (firmware.type == FirmwareFileTypeBootloader) {
-            msg = [msg stringByAppendingFormat:@"Bootloader version: %@", firmware.version];
+        
+        if ([firmware.bin_file indexOfObject:bin_file] != (firmware.bin_file.count - 1) || firmware.update_content != nil) {
+            msg = [msg stringByAppendingString:@"\n"];
         }
     }
     
-    UIAlertController *upgradeAlertView = [UIAlertController alertControllerWithTitle:@"Firmware upgrade" message:msg preferredStyle:UIAlertControllerStyleAlert];
+    if (firmware.update_content != nil)
+        msg = [msg stringByAppendingFormat:@"\n%@", firmware.update_content];
+    
+    // 设置消息内容的字体
+    NSMutableAttributedString *alertControllerMessageStr = [[NSMutableAttributedString alloc] initWithString:msg];
+    NSMutableParagraphStyle *paragraph = [[NSMutableParagraphStyle alloc] init];
+    paragraph.alignment = NSTextAlignmentLeft; // 左对齐
+    [alertControllerMessageStr setAttributes:@{NSParagraphStyleAttributeName:paragraph} range:NSMakeRange(0, alertControllerMessageStr.length)];
+    [alertControllerMessageStr addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:13] range:NSMakeRange(0, alertControllerMessageStr.length)];
+
+    // 设置消息框
+    UIAlertController *upgradeAlertView = [UIAlertController alertControllerWithTitle:self.upgradeFile.name message:msg preferredStyle:UIAlertControllerStyleAlert];
     UIAlertAction *actionCancel = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
     UIAlertAction *actionUpgrade = [UIAlertAction actionWithTitle:@"Upgrade" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action){
         [self startFirmwareUpgrade];
     }];
+    [upgradeAlertView setValue:alertControllerMessageStr forKey:@"attributedMessage"]; // 添加消息内容
     
     [upgradeAlertView addAction:actionCancel];
     [upgradeAlertView addAction:actionUpgrade];
@@ -339,13 +353,12 @@
             // 搜索该设备的升级文件
             for (FileInfo *info in self.allFileInfo) { // 遍历文件
                 if ([info.path hasSuffix:@".zip"]) { // zip文件
-                    NSData *firmware_pid, *device_pid = [NSData dataWithBytes:self.smart_device.device.manufacture_data->product_id length:sizeof(self.smart_device.device.manufacture_data->product_id)];
-                    NSMutableArray *firmware = [NSMutableArray array];
+                    NSData *device_pid = [NSData dataWithBytes:self.smart_device.device.manufacture_data->product_id length:sizeof(self.smart_device.device.manufacture_data->product_id)];
+                    Firmware *firmware = [[Firmware alloc]initWithLoadFirmware:info.path]; // 装载升级文件
+                    if (firmware == nil) continue;
                     
-                    [FirmwareFile decodeUpgrqadeFile:info.path pid:&firmware_pid firmware:firmware]; // 解析升级文件
-                    
-                    if ([device_pid isEqualToData:firmware_pid]) { // 固件文件与设备PID一致
-                        for (FirmwareFile *file in firmware) { // 循环检查升级文件中的固件版本是否比设备当前版本高
+                    if ([device_pid isEqualToData:firmware.product_id]) { // 固件文件与设备PID一致
+                        for (FirmwareFile *file in firmware.bin_file) { // 循环检查升级文件中的固件版本是否比设备当前版本高
                             NSString *version = (file.type == FirmwareFileTypeAppliction) ? app_version : boot_version;
                             NSComparisonResult result = [version compare:file.version options:NSNumericSearch];
                             if (result == NSOrderedAscending) { //current versiion < firmware version

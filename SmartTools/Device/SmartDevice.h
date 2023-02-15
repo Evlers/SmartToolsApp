@@ -11,7 +11,7 @@
 #import <Foundation/Foundation.h>
 #import "CoreBluetooth/CoreBluetooth.h"
 #import "SmartDeviceStandard.h"
-
+#import "FirmwareFile.h"
 
 #pragma pack(push)
 #pragma pack(1)     // 字节对齐
@@ -49,10 +49,8 @@ typedef struct
 
 @interface FirmwareUpgrade : NSObject
 
-@property (nonatomic, strong) NSMutableArray    *firmware;          // 固件文件信息数组
-@property (nonatomic, strong) NSData            *pid;               // 升级文件的产品ID
+@property (nonatomic, strong) Firmware          *firmware;          // 固件文件信息
 @property (nonatomic, assign) NSInteger         fileOffset;         // 文件偏移
-@property (nonatomic, strong) NSString          *currentVersiion;   // 当前固件版本
 @property (nonatomic, assign) NSInteger         dataTransLength;    // 数据传输长度
 
 @end

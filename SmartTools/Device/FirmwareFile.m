@@ -14,14 +14,15 @@
 
 @implementation FirmwareFile
 
-// 解析固件文件
-// filePath 压缩固件文件路径
-// pid 固件的产品ID
-// firmware 返回 FirmwareFile 类型的可变数组
-+ (bool)decodeUpgrqadeFile:(NSString *)filePath pid:(NSData **)pid firmware:(NSMutableArray<FirmwareFile *> *)firmware {
+@end
+
+@implementation Firmware
+
+- (Firmware *)initWithLoadFirmware:(NSString *)filePath {
     
+    if (self != [super init]) return nil;
     NSString *cachesPath = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES)lastObject]; // caches路径
-    NSString *folderPath = [cachesPath stringByAppendingPathComponent:@"FirmwareFile"]; // 解压目标路径
+    NSString *folderPath = [cachesPath stringByAppendingPathComponent:@"FirmwareFilePath"]; // 解压目标路径
     NSData *manifest_data = nil;
     NSError *error;
     FirmwareFile *file;
@@ -29,19 +30,20 @@
     
     if (![SSZipArchive unzipFileAtPath:filePath toDestination:folderPath]) { // 解压该文件到caches中的firmwareFile目录
         NSLog(@"Zip file decompress failed !");
-        return false;
+        return nil;
     }
     
     NSMutableArray *upgradeFile = [NSMutableArray array];
     [Utility readAllFileInfo:upgradeFile folderPath:folderPath]; // 读取所有文件信息
     
+    // 读取升级文件中的Json文件
     for (FileInfo *info in upgradeFile) { // 读取压缩文件中的文件
         if ([info.name isEqualToString:@"manifest.json"]) { // 检查清单(Json文件)
             NSFileHandle *file = [NSFileHandle fileHandleForReadingAtPath:info.path]; // 打开Json文件
             manifest_data = [file readDataToEndOfFile]; // 读取文件数据
             if (manifest_data == nil) {
                 NSLog(@"The manifest object does not exist");
-                return false;
+                return nil;
             }
             break;
         }
@@ -51,61 +53,62 @@
     root = [NSJSONSerialization JSONObjectWithData:manifest_data options:NSJSONReadingMutableContainers error:&error];
     if (error != nil) {
         NSLog(@"Json format error: %@", error);
-        return false;
+        return nil;
     }
     
     if ((manifest = root[@"manifest"]) == nil) {
         NSLog(@"The manifest object does not exist");
-        return false;
+        return nil;
     }
     
-    NSString *version = manifest[@"ota_version"];
-    if (version == nil || ![version isEqualToString:@"1.0.0"]) {
+    if ((self.ota_version = manifest[@"ota_version"]) == nil || ![self.ota_version isEqualToString:@"1.0.0"]) {
         NSLog(@"The manifest version did not match!");
-        return false;
+        return nil;
     }
     
     NSString *pid_str;
     if ((pid_str = manifest[@"pid"]) == nil) {
         NSLog(@"Product ID not found in upgrade file!");
-        return false;
+        return nil;
+    }
+    self.product_id = [Utility HexStringToData:pid_str];
+    
+    if ((self.hardware_version = manifest[@"hardware_version"]) == nil) {
+        NSLog(@"hardware version not found in upgrade file!");
     }
     
-    if (pid != nil) {
-        *pid = [Utility HexStringToData:pid_str];
+    if ((self.update_content = manifest[@"update_content"]) == nil) {
+        NSLog(@"update content not found in upgrade file!");
     }
     
     if (manifest[@"bootloader"] == nil && manifest[@"application"] == nil) { // Bootloader 以及 application 固件都没识别到
         NSLog(@"No bootloader or appliction upgrade object found");
-        return false;
-    }
-    
-    if (firmware == nil) { // 不需要固件文件
-        return true;
+        return nil;
     }
     
     // 读取固件文件信息
+    self.bin_file = [NSMutableArray array];
     if (manifest[@"bootloader"]) {
-        if ((file = [self decodeFile:manifest firmware:@"bootloader" fileFolder:upgradeFile]) != nil)
-            [firmware addObject:file];
+        if ((file = [self loadBinFile:manifest firmware:@"bootloader" fileFolder:upgradeFile]) != nil)
+            [self.bin_file addObject:file];
     } else
         NSLog(@"The bootloader object does not exist");
     
     if (manifest[@"application"]) {
         FirmwareFile *file;
-        if ((file = [self decodeFile:manifest firmware:@"application" fileFolder:upgradeFile]) != nil)
-            [firmware addObject:file];
+        if ((file = [self loadBinFile:manifest firmware:@"application" fileFolder:upgradeFile]) != nil)
+            [self.bin_file addObject:file];
     } else
         NSLog(@"The application object does not exist");
     
-    if (firmware.count == 0) { // 如果未能找到一个固件
-        return false; // 错误
+    if (self.bin_file.count == 0) { // 如果未能找到一个固件
+        return nil; // 错误
     }
     
-    return true;
+    return self;
 }
 
-+ (FirmwareFile *)decodeFile:(NSDictionary *)manifest firmware:(NSString *)file fileFolder:(NSMutableArray *)upgradeFile {
+- (FirmwareFile *)loadBinFile:(NSDictionary *)manifest firmware:(NSString *)file fileFolder:(NSMutableArray *)upgradeFile {
     
     NSDictionary *firmware = manifest[file];
     NSString *fileName = firmware[@"file"];

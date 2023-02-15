@@ -25,8 +25,18 @@ typedef NS_ENUM(NSInteger, FirmwareFileType) {
 @property (nonatomic, strong) NSData            *md5;               // 文件MD5校验值
 @property (nonatomic, strong) NSString          *version;           // 固件文件版本
 
+@end
 
-+ (bool)decodeUpgrqadeFile:(NSString *)filePath pid:(NSData **)pid firmware:(NSMutableArray<FirmwareFile *> *)firmware;
+
+@interface Firmware : NSObject
+
+@property (nonatomic, strong) NSMutableArray<FirmwareFile *>    *bin_file;          // 固件文件 (该升级文件中包含的所有固件可执行文件)
+@property (nonatomic, strong) NSData                            *product_id;        // 产品ID (该升级文件适用的产品ID)
+@property (nonatomic, strong) NSString                          *hardware_version;  // 硬件版本 (该升级文件适用的设备硬件版本)
+@property (nonatomic, strong) NSString                          *update_content;    // 更新内容 (包含本次更新的内容描述)
+@property (nonatomic, strong) NSString                          *ota_version;       // 升级文件的版本号
+
+- (Firmware *)initWithLoadFirmware:(NSString *)filePath;
 
 @end
 

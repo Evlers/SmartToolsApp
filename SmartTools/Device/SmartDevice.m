@@ -110,14 +110,11 @@
     if (filePath == nil || ![filePath hasSuffix:@".zip"]) return false;
     
     self.firmwareUpgrade = [FirmwareUpgrade alloc];
-    self.firmwareUpgrade.firmware = [NSMutableArray array];
-    
-    NSData *pid;
-    if ([FirmwareFile decodeUpgrqadeFile:filePath pid:&pid firmware:self.firmwareUpgrade.firmware] == false) {
+    if ((self.firmwareUpgrade.firmware = [[Firmware alloc]initWithLoadFirmware:filePath]) == nil) {
         NSLog(@"Firmware file %@ analysis error !", filePath);
         return false;
     }
-    self.firmwareUpgrade.pid = pid; // 保存升级文件的PID
+    
     [self sendUpgradeRequest]; // 发送升级请求
     
     return true;
@@ -128,7 +125,7 @@
     ota_upgrade_request_t ota_upgrade_request;
     protocol_body_t body;
     
-    ota_upgrade_request.type = ((FirmwareFile *)[self.firmwareUpgrade.firmware objectAtIndex:0]).type;
+    ota_upgrade_request.type = ((FirmwareFile *)[self.firmwareUpgrade.firmware.bin_file objectAtIndex:0]).type;
     ota_upgrade_request.length = BODY_DATA_MAX_LEN;
     
     body.len = sizeof(ota_upgrade_request_t);
@@ -168,7 +165,7 @@
     uint8_t result = body->code & ~0x80; // 获取应答结果
     protocol_body_t res_body;
     res_body.data = malloc(BODY_DATA_MAX_LEN);
-    FirmwareFile *firmwareFile = ((FirmwareFile *)[self.firmwareUpgrade.firmware objectAtIndex:0]);
+    FirmwareFile *firmwareFile = ((FirmwareFile *)[self.firmwareUpgrade.firmware.bin_file objectAtIndex:0]);
     
     switch (code)
     {
@@ -176,16 +173,14 @@
         {
             ota_upgrade_response_t upgrade_response;
             memcpy(&upgrade_response, body->data, sizeof(upgrade_response));
-            NSString *version = [NSString stringWithFormat:@"v%d.%d.%d",
-                                 upgrade_response.version[0], upgrade_response.version[1], upgrade_response.version[2]];
-            self.firmwareUpgrade.currentVersiion = version;
+//            NSString *version = [NSString stringWithFormat:@"v%d.%d.%d", upgrade_response.version[0], upgrade_response.version[1], upgrade_response.version[2]];
             self.firmwareUpgrade.dataTransLength = MIN(upgrade_response.length, BODY_DATA_MAX_LEN - sizeof(ota_trans_file_data_t));
             
-//            NSComparisonResult result = [self.firmwareUpgrade.currentVersiion compare:self.firmwareUpgrade.firmwareVersion options:NSNumericSearch];
+//            NSComparisonResult result = [version compare:firmwareFile.version options:NSNumericSearch];
 //            if (result == NSOrderedAscending) { //currentVersiion < firmwareVersion
                 ota_upgrade_file_info_t ota_upgrade_file_info;
                 
-                [self.firmwareUpgrade.pid getBytes:ota_upgrade_file_info.pid length:sizeof(ota_upgrade_file_info.pid)];
+                [self.firmwareUpgrade.firmware.product_id getBytes:ota_upgrade_file_info.pid length:sizeof(ota_upgrade_file_info.pid)];
                 NSString *str_version = [firmwareFile.version substringFromIndex:1]; // 除去前面的v字符
                 NSArray *array_version = [str_version componentsSeparatedByString:@"."]; // 使用字符"."进行分割
                 for (int i = 0; i < sizeof(ota_upgrade_file_info.version); i ++) {
@@ -253,7 +248,7 @@
             if (result == 0) {
                 if (self.firmwareUpgrade.fileOffset == firmwareFile.file_data.length) { // 所有数据已发送完成
                     uint8_t cmd;
-                    if (self.firmwareUpgrade.firmware.count >= 2) {
+                    if (self.firmwareUpgrade.firmware.bin_file.count >= 2) {
                         cmd = OTA_UPGRADE_CMD_CHECK; // 只校验固件不执行重启，等待下一个文件的发送后再重启装载
                     } else {
                         cmd = OTA_UPGRADE_CMD_CHECK_REBOOT; // 校验并重启安装新固件
@@ -271,13 +266,13 @@
             
         case SP_CODE_UPGRADE_END:
             if (result == 0) { // 升级成功
-                if (self.firmwareUpgrade.firmware.count >= 2) { // 还有固件文件需要传输
-                    [self.firmwareUpgrade.firmware removeObject:[self.firmwareUpgrade.firmware objectAtIndex:0]]; // 删除已传输完的固件
+                if (self.firmwareUpgrade.firmware.bin_file.count >= 2) { // 还有固件文件需要传输
+                    [self.firmwareUpgrade.firmware.bin_file removeObject:[self.firmwareUpgrade.firmware.bin_file objectAtIndex:0]]; // 删除已传输完的固件
                     [self sendUpgradeRequest]; // 发送升级请求
                     NSLog(@"Firmware transfer is successful. Transfer of the next file begins");
                     break;
                 } else {
-                    [self.firmwareUpgrade.firmware removeAllObjects];
+                    [self.firmwareUpgrade.firmware.bin_file removeAllObjects];
                     NSLog(@"Firmware upgrade success.");
                 }
             }
@@ -305,7 +300,7 @@
     
     ota_trans_file_data_t trans_file_head;
     uint8_t file_trans_head_len = sizeof(trans_file_head) - sizeof(trans_file_head.data);
-    FirmwareFile *firmwareFile = ((FirmwareFile *)[self.firmwareUpgrade.firmware objectAtIndex:0]);
+    FirmwareFile *firmwareFile = ((FirmwareFile *)[self.firmwareUpgrade.firmware.bin_file objectAtIndex:0]);
     
     trans_file_head.length = MIN(self.firmwareUpgrade.dataTransLength,
                                  firmwareFile.file_data.length - self.firmwareUpgrade.fileOffset);
