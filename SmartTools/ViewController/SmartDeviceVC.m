@@ -173,10 +173,9 @@
     DataPoint *data_point = [(NSMutableArray *)[self.data_point objectAtIndex:indexPath.section] objectAtIndex:indexPath.row];
     if ( self.allFileInfo.count && [data_point.name containsString:@"Firmware version"]) {
         [self promptUpdateInformation]; // 提示更新信息
-        
-    } else {
-        [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
     }
+    
+    [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
 }
 
 // 设置数据点
@@ -250,9 +249,7 @@
     
     [upgradeAlertView addAction:actionCancel];
     [upgradeAlertView addAction:actionUpgrade];
-    [self presentViewController:upgradeAlertView animated:YES completion:^{
-        [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
-    }]; // 显示提示窗口
+    [self presentViewController:upgradeAlertView animated:YES completion:nil]; // 显示提示窗口
 }
 
 // 开始固件升级
@@ -335,6 +332,41 @@
     self.alertFirmwareUpgrade.title = [NSString stringWithFormat:@"updating... %u%%", (uint32_t)(progress * 100.0)];
 }
 
+// 搜索当前连接的智能设备可用的升级文件
+- (void)searchUpgradeFile {
+    
+    if (self.smart_device.device.hardware_version == nil) return ; // 硬件版本号是否已就绪
+    if (self.smart_device.device.app_firmware_version == nil) return ; // 固件版本号是否已就绪
+    
+    for (FileInfo *info in self.allFileInfo) { // 遍历文件
+        if ([info.path hasSuffix:@".zip"]) { // zip文件
+            NSData *device_pid = [NSData dataWithBytes:self.smart_device.device.manufacture_data->product_id length:sizeof(self.smart_device.device.manufacture_data->product_id)];
+            Firmware *firmware = [[Firmware alloc]initWithLoadFirmware:info.path]; // 装载升级文件
+            
+            if (firmware == nil) continue;
+            if (![device_pid isEqualToData:firmware.product_id]) continue; // 固件文件与设备PID是否一致
+            
+            NSString *str_version = [firmware.hardware_version substringFromIndex:1]; // 除去前面的v字符
+            NSArray *array_version = [str_version componentsSeparatedByString:@"."]; // 使用字符"."进行分割
+            uint8_t firmware_major_version = [((NSString *)array_version[0]) intValue]; // 取主要的版本号
+            str_version = [self.smart_device.device.hardware_version substringFromIndex:1];
+            array_version = [str_version componentsSeparatedByString:@"."];
+            uint8_t device_major_version = [((NSString *)array_version[0]) intValue];
+            
+            if (device_major_version != firmware_major_version) continue; // 判断硬件版本是否匹配(只匹配主要的版本号,例如:v1.x.x)
+            
+            for (FirmwareFile *file in firmware.bin_file) // 循环检查升级文件中的固件版本是否比设备当前版本高
+            {
+                NSString *version = (file.type == FirmwareFileTypeAppliction) ? self.smart_device.device.app_firmware_version : self.smart_device.device.boot_firmware_version;
+                if ([version compare:file.version options:NSNumericSearch] == NSOrderedAscending) { //current versiion < firmware version
+                    self.upgradeFile = info; // 保存文件信息
+                    return ;
+                }
+            }
+        }
+    }
+}
+
 // 智能设备数据更新
 - (void)smartDeviceDataUpdate:(NSDictionary <NSString *, id>*)data; {
     
@@ -350,27 +382,15 @@
             NSString *app_version = version_info[1];
             NSLog(@"Smart device bootloader version: %@", boot_version);
             
-            // 搜索该设备的升级文件
-            for (FileInfo *info in self.allFileInfo) { // 遍历文件
-                if ([info.path hasSuffix:@".zip"]) { // zip文件
-                    NSData *device_pid = [NSData dataWithBytes:self.smart_device.device.manufacture_data->product_id length:sizeof(self.smart_device.device.manufacture_data->product_id)];
-                    Firmware *firmware = [[Firmware alloc]initWithLoadFirmware:info.path]; // 装载升级文件
-                    if (firmware == nil) continue;
-                    
-                    if ([device_pid isEqualToData:firmware.product_id]) { // 固件文件与设备PID一致
-                        for (FirmwareFile *file in firmware.bin_file) { // 循环检查升级文件中的固件版本是否比设备当前版本高
-                            NSString *version = (file.type == FirmwareFileTypeAppliction) ? app_version : boot_version;
-                            NSComparisonResult result = [version compare:file.version options:NSNumericSearch];
-                            if (result == NSOrderedAscending) { //current versiion < firmware version
-                                self.upgradeFile = info; // 保存文件信息
-                                goto _upgrade;
-                            }
-                        }
-                    }
-                }
-            }
-            _upgrade:
-            index = [self set_data_poinit:key value:app_version type:(self.upgradeFile == nil) ? UITableViewCellAccessoryNone : UITableViewCellAccessoryDisclosureIndicator]; // 设置Cell
+            [self searchUpgradeFile]; // 搜索可用的升级文件
+            UITableViewCellAccessoryType type = (self.upgradeFile == nil) ? UITableViewCellAccessoryNone : UITableViewCellAccessoryDisclosureIndicator;
+            index = [self set_data_poinit:key value:app_version type:type]; // 设置Cell
+            
+        } else if ([key containsString:@"Hardware version"]) { // 硬件版本
+            [self searchUpgradeFile]; // 搜索可用的升级文件
+            UITableViewCellAccessoryType type = (self.upgradeFile == nil) ? UITableViewCellAccessoryNone : UITableViewCellAccessoryDisclosureIndicator;
+            index = [self set_data_poinit:@"Firmware version" value:self.smart_device.device.app_firmware_version type:type]; // 设置固件版本Cell
+            index = [self set_data_poinit:key value:data[key] type:type]; // 设置硬件版本Cell
             
         } else {// 其他数据的key跟数据点名称一样，且value都是NSString类型的
             index = [self set_data_poinit:key value:data[key]]; // 根据key更新对应数据点的值

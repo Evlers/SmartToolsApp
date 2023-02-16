@@ -44,6 +44,10 @@ typedef struct
 @property (nonatomic, strong) ProductInfo *product_info;            // 产品信息
 @property (nonatomic, strong) CBPeripheral *peripheral;             // 蓝牙外围设备
 @property (nonatomic, assign) manufacture_data_t *manufacture_data; // 厂商自定义数据
+@property (nonatomic, strong) NSString *hardware_version;           // 设备硬件版本号
+@property (nonatomic, strong) NSString *boot_firmware_version;      // 设备Bootloader固件版本号
+@property (nonatomic, strong) NSString *app_firmware_version;       // 设备Application固件版本号
+@property (nonatomic, strong) NSString *uuid;                       // 设备唯一标识(UUID)
 
 @end
 
