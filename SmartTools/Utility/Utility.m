@@ -10,17 +10,14 @@
 
 @implementation FileInfo
 
-@end
-
-
-@implementation Utility
-
-+ (void)readAllFileInfo:(NSMutableArray *)file folderPath:(NSString *)folderPath {
+// 读取文件夹中的所有文件信息
++ (NSMutableArray<FileInfo *> *)readAllFileInfoInFolder:(NSString *)folderPath {
+    
+    NSMutableArray *fileInfo = [NSMutableArray array];
     NSFileManager *manager = [NSFileManager defaultManager]; // 文件管理器
+    if (![manager fileExistsAtPath:folderPath]) return nil; // 检查目录是否存在
     
-    if (![manager fileExistsAtPath:folderPath]) return; // 检查目录是否存在
-    
-    NSEnumerator *childFilesEnumerator = [[manager subpathsAtPath:folderPath] reverseObjectEnumerator]; // 反向枚举器
+    NSEnumerator *childFilesEnumerator = [[manager subpathsAtPath:folderPath] objectEnumerator]; // 从前向后枚举器
     
     NSString *fileName = nil;
     while ((fileName = [childFilesEnumerator nextObject]) != nil) { // 使用枚举器,遍历所有文件
@@ -33,9 +30,15 @@
         file_info.owner = [fileAttributes objectForKey:@"NSFileGroupOwnerAccountName"]; // 所有权用户
         file_info.path = [folderPath stringByAppendingPathComponent:fileName]; // 文件完整路径
         
-        [file addObject:file_info]; // 添加到所有文件可变数组中
+        [fileInfo addObject:file_info]; // 添加到所有文件可变数组中
     }
+    return fileInfo;
 }
+
+@end
+
+
+@implementation Utility
 
 // 十六进制NSStrinig转NSData
 + (NSData *)HexStringToData:(NSString *)hexStr {

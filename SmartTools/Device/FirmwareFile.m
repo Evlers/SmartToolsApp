@@ -18,11 +18,53 @@
 
 @implementation Firmware
 
++ (NSMutableArray<FileInfo *> *)getAvaliableFirmwareInAllFile:(NSMutableArray<FileInfo *> *)allFile filtration:(NSDictionary *)filtration {
+
+    NSData *product_id = filtration[@"product id"];
+    NSString *hardware_version = filtration[@"hardware version"];
+    NSString *boot_firmware_version = filtration[@"bootloader firmware version"];
+    NSString *app_firmware_version = filtration[@"application firmware version"];
+    
+    NSMutableArray<FileInfo *> *avaliableFirmware = [NSMutableArray array];
+    
+    for (FileInfo *info in allFile) { // 遍历文件
+        if ([info.path hasSuffix:@".zip"]) { // zip文件
+            NSLog(@"Start loading the %@ file", info.name);
+            Firmware *firmware = [[Firmware alloc]initWithLoadFirmware:info.path]; // 装载升级文件
+            
+            if (firmware == nil) continue;
+            if (product_id != nil && ![product_id isEqualToData:firmware.product_id]) continue; // 固件文件与设备PID是否一致
+            
+            if (hardware_version != nil) { // 如果需要筛选硬件版本号
+                NSString *str_version = [firmware.hardware_version substringFromIndex:1]; // 除去前面的v字符
+                NSArray *array_version = [str_version componentsSeparatedByString:@"."]; // 使用字符"."进行分割
+                uint8_t firmware_major_version = [((NSString *)array_version[0]) intValue]; // 取主要的版本号
+                str_version = [hardware_version substringFromIndex:1];
+                array_version = [str_version componentsSeparatedByString:@"."];
+                uint8_t needed_major_version = [((NSString *)array_version[0]) intValue];
+                
+                if (needed_major_version != firmware_major_version) continue; // 判断硬件版本是否匹配(只匹配主要的版本号,例如:v1.x.x)
+            }
+            
+            for (FirmwareFile *file in firmware.bin_file) // 循环检查升级文件中的固件版本是否比设备当前版本高
+            {
+                NSString *version = (file.type == FirmwareFileTypeAppliction) ? app_firmware_version : boot_firmware_version;
+                if (version == nil || [version compare:file.version options:NSNumericSearch] == NSOrderedAscending) { // 不筛选版本号，或者固件版本大于筛选的版本号
+                    [avaliableFirmware addObject:info]; // 添加该升级文件
+                    break; // 继续寻找其他可用的升级文件
+                }
+            }
+        }
+    }
+    
+    return avaliableFirmware;
+}
+
 - (Firmware *)initWithLoadFirmware:(NSString *)filePath {
     
     if (self != [super init]) return nil;
     NSString *cachesPath = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES)lastObject]; // caches路径
-    NSString *folderPath = [cachesPath stringByAppendingPathComponent:@"FirmwareFilePath"]; // 解压目标路径
+    NSString *folderPath = [cachesPath stringByAppendingPathComponent:@"FirmwareFileFoolder"]; // 解压目标路径
     NSData *manifest_data = nil;
     NSError *error;
     FirmwareFile *file;
@@ -33,11 +75,10 @@
         return nil;
     }
     
-    NSMutableArray *upgradeFile = [NSMutableArray array];
-    [Utility readAllFileInfo:upgradeFile folderPath:folderPath]; // 读取所有文件信息
+    NSMutableArray<FileInfo *> *upgradeFileFolder = [FileInfo readAllFileInfoInFolder:folderPath]; // 读取压缩文件中所有文件信息
     
     // 读取升级文件中的Json文件
-    for (FileInfo *info in upgradeFile) { // 读取压缩文件中的文件
+    for (FileInfo *info in upgradeFileFolder) { // 读取压缩文件中的文件
         if ([info.name isEqualToString:@"manifest.json"]) { // 检查清单(Json文件)
             NSFileHandle *file = [NSFileHandle fileHandleForReadingAtPath:info.path]; // 打开Json文件
             manifest_data = [file readDataToEndOfFile]; // 读取文件数据
@@ -89,14 +130,14 @@
     // 读取固件文件信息
     self.bin_file = [NSMutableArray array];
     if (manifest[@"bootloader"]) {
-        if ((file = [self loadBinFile:manifest firmware:@"bootloader" fileFolder:upgradeFile]) != nil)
+        if ((file = [self loadBinFile:manifest firmware:@"bootloader" fileFolder:upgradeFileFolder]) != nil)
             [self.bin_file addObject:file];
     } else
         NSLog(@"The bootloader object does not exist");
     
     if (manifest[@"application"]) {
         FirmwareFile *file;
-        if ((file = [self loadBinFile:manifest firmware:@"application" fileFolder:upgradeFile]) != nil)
+        if ((file = [self loadBinFile:manifest firmware:@"application" fileFolder:upgradeFileFolder]) != nil)
             [self.bin_file addObject:file];
     } else
         NSLog(@"The application object does not exist");
@@ -140,7 +181,7 @@
 #pragma clang diagnostic ignored "-Wdeprecated-declarations" // 忽略MD5已被IOS 13.0以上版本弃用的警告
             CC_MD5(firmwareFile.file_data.bytes, (uint32_t)firmwareFile.file_data.length, md5);
 #pragma clang diagnostic pop
-            if (memcmp(md5, firmwareFile.md5.bytes, sizeof(md5)) != 0) { // 校验错误
+            if (memcmp(md5, firmwareFile.md5.bytes, sizeof(md5)) != 0  || crc32_value != firmwareFile.crc32) { // 校验错误
                 NSLog(@"The %@ firmware file verification in the upgrade file is incorrect!", file);
                 NSData *md5_ns = [[NSData alloc]initWithBytes:md5 length:sizeof(md5)];
                 NSLog(@"md5: %@ %@", md5_ns, firmwareFile.md5);

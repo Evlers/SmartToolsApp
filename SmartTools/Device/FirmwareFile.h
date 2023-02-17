@@ -9,6 +9,7 @@
 #define FirmwareFile_h
 
 #import <Foundation/Foundation.h>
+#import "Utility.h"
 
 typedef NS_ENUM(NSInteger, FirmwareFileType) {
     FirmwareFileTypeBootloader = 0,
@@ -36,6 +37,7 @@ typedef NS_ENUM(NSInteger, FirmwareFileType) {
 @property (nonatomic, strong) NSString                          *update_content;    // 更新内容 (包含本次更新的内容描述)
 @property (nonatomic, strong) NSString                          *ota_version;       // 升级文件的版本号
 
++ (NSMutableArray<FileInfo *> *)getAvaliableFirmwareInAllFile:(NSMutableArray<FileInfo *> *)allFile filtration:(NSDictionary *)filtration;
 - (Firmware *)initWithLoadFirmware:(NSString *)filePath;
 
 @end

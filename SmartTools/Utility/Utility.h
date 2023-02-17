@@ -18,11 +18,12 @@
 @property (nonatomic, strong) NSString  *owner;
 @property (nonatomic, strong) NSString  *path;
 
++ (NSMutableArray<FileInfo *> *)readAllFileInfoInFolder:(NSString *)folderPath;
+
 @end
 
 @interface Utility : NSObject
 
-+ (void)readAllFileInfo:(NSMutableArray *)file folderPath:(NSString *)folderPath;
 + (NSData *)HexStringToData:(NSString *)hexStr;
 
 @end
