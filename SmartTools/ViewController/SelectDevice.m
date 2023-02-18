@@ -18,6 +18,7 @@
 @property (nonatomic, strong) CBCentralManager *centralManager;
 @property (nonatomic, strong) NSMutableArray<Device *> *device;
 @property (nonatomic, strong) UIActivityIndicatorView *indicatorView;
+@property (nonatomic, strong) UILabel *placeholder;
 
 @property (nonatomic, strong) SmartDeviceVC *device_view;
 
@@ -36,12 +37,21 @@
     product_info.image = nil;
     self.productInfo = @{@"11223344": product_info};
     
-    NSLog(@"productInfo: %@", self.productInfo);
+//    NSLog(@"productInfo: %@", self.productInfo);
     
     // 配置 TableView
     self.table = [self.view viewWithTag:1];  // 根据 TAG ID 获取到主页面的 TableView 控件
     self.table.delegate = self;              // 设置代理
     self.table.dataSource = self;            // 设置数据源
+    
+    // 配置TableView占位符
+    self.placeholder = [[UILabel alloc]initWithFrame:CGRectMake(20, self.table.frame.size.height / 2 - 60, self.table.frame.size.width - 40, 60)];
+    self.placeholder.text = @"No device found";
+    self.placeholder.numberOfLines = 3;
+    self.placeholder.font = [UIFont  boldSystemFontOfSize:30.0];
+    self.placeholder.textColor = [UIColor lightGrayColor];
+    self.placeholder.textAlignment = NSTextAlignmentCenter;
+    [self.table addSubview:self.placeholder];
     
     // 配置扫描动画
 //    self.indicatorView = [[UIActivityIndicatorView alloc]initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
@@ -65,19 +75,24 @@
 
 // 下拉更新回调
 -(void)DownPullUpdate:(UIRefreshControl *)refc {
-    if(self.centralManager.state == CBManagerStatePoweredOn){
-        [self.centralManager stopScan];//停止扫描
+    if (self.centralManager.state == CBManagerStatePoweredOn){
+        [self.centralManager stopScan]; // 停止扫描
 //        [self.indicatorView stopAnimating];
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 500 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
-            while (self.device.count) {//删除所有搜索到的设备
-                NSIndexPath *IndexPath = [NSIndexPath indexPathForRow:self.device.count-1 inSection:0];//设定行数
-                [self.device removeObjectAtIndex:self.device.count-1];//删除一个设备
+            while (self.device.count) { // 删除所有搜索到的设备
+                NSIndexPath *IndexPath = [NSIndexPath indexPathForRow:self.device.count-1 inSection:0]; // 设定行数
+                [self.device removeObjectAtIndex:self.device.count-1]; // 删除一个设备
                 [self.table deleteRowsAtIndexPaths:[NSArray arrayWithObject:IndexPath] withRowAnimation:UITableViewRowAnimationRight];//动画删除设备
             }
             
             [refc endRefreshing];//停止更新
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 100 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
                 [self.centralManager scanForPeripheralsWithServices:nil options:nil]; // 搜索周围所有蓝牙设备
+                
+                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1000 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{ // 1秒后如果没搜索到设备则显示占位符
+                    if (self.device.count == 0)
+                        [self.table addSubview:self.placeholder];
+                });
 //                [self.indicatorView startAnimating];
             });
         });
@@ -90,12 +105,14 @@
 // 已经进入界面
 -(void)viewDidAppear:(BOOL)animated {
     
-    self.centralManager.delegate = self; // 夺回中心管理器的代理
-    [self.centralManager scanForPeripheralsWithServices:nil options:nil]; // 继续扫描设备
-    if (self.device.count && [self.device objectAtIndex:self.table.indexPathForSelectedRow.row].peripheral.state == CBPeripheralStateConnected) {//若果设备已经连接
-        [self.centralManager cancelPeripheralConnection:[self.device objectAtIndex:self.table.indexPathForSelectedRow.row].peripheral];//断开连接
+    if (self.centralManager.state == CBManagerStatePoweredOn) {
+        self.centralManager.delegate = self; // 夺回中心管理器的代理
+        [self.centralManager scanForPeripheralsWithServices:nil options:nil]; // 继续扫描设备
+        if (self.device.count && [self.device objectAtIndex:self.table.indexPathForSelectedRow.row].peripheral.state == CBPeripheralStateConnected) {//若果设备已经连接
+            [self.centralManager cancelPeripheralConnection:[self.device objectAtIndex:self.table.indexPathForSelectedRow.row].peripheral];//断开连接
+        }
+        [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
     }
-    [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
 }
 
 #pragma mark -- TableView 接口
@@ -108,6 +125,9 @@
 
 // Tableview接口: 返回行数
 -(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    if (self.device.count) {
+        [self.placeholder removeFromSuperview]; // 移除占位符
+    }
     return self.device.count;
 }
 

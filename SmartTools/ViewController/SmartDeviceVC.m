@@ -75,7 +75,7 @@
 // 即将进入视图
 -(void)viewWillAppear:(BOOL)animated {
     
-    [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
+//    [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
     if (self.device.peripheral.state == CBPeripheralStateConnected) return ; // 如果已连接则不执行以下处理
     
     self.smart_device = [[SmartDevice alloc]initWithCentralManager:self.centralManager]; // 创建智能设备
@@ -87,7 +87,7 @@
     [self presentViewController:self.alert animated:YES completion:nil]; // 显示提示窗口
     
     // 配置数据点列表
-    [self.data_point removeAllObjects];
+//    [self.data_point removeAllObjects];
     [self.table reloadData];
     
     // device base info
