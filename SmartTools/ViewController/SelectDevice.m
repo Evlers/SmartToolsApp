@@ -13,7 +13,6 @@
 
 @interface SelectDevice () <UITableViewDelegate, UITableViewDataSource, CBCentralManagerDelegate, SmartDeviceDelegate>
 
-@property (nonatomic, strong) dispatch_block_t connectFailedBlock;
 @property (nonatomic, strong) NSDictionary *productInfo;
 @property (nonatomic, strong) UITableView *table;
 @property (nonatomic, strong) CBCentralManager *centralManager;
@@ -34,7 +33,7 @@
     
     // 初始化产品信息
     ProductInfo *product_info = [ProductInfo alloc];
-    product_info.default_name = @"Smart Battery package";
+    product_info.default_name = @"Smart Battery";
     product_info.image = nil;
     product_info.type = SmartDeviceProductTypeBattery;
     self.productInfo = @{@"11223344": product_info};
@@ -127,7 +126,7 @@
     
     [btn setTitle:@"Connecting.." forState:UIControlStateNormal];
     [self.smartDevice objectAtIndex:btn.tag].delegate = self; // 代理智能设备接口
-    [self.centralManager connectPeripheral:[self.smartDevice objectAtIndex:btn.tag].baseInfo.peripheral options:nil]; // 连接设备蓝牙
+    [[self.smartDevice objectAtIndex:btn.tag] connectToDeviceBLE:self.centralManager]; // 连接到设备蓝牙
 }
 
 #pragma mark -- TableView 接口
@@ -218,7 +217,7 @@
     self.device_view = [mainStory instantiateViewControllerWithIdentifier:@"DeviceView"]; // 获取试图控制器
     self.device_view.smartDevice = [self.smartDevice objectAtIndex:indexPath.row]; // 传递设备信息到设备窗口
     if (smartDevice.baseInfo.peripheral.state != CBPeripheralStateConnected)
-        [self.centralManager connectPeripheral:smartDevice.baseInfo.peripheral options:nil]; // 连接设备蓝牙
+        [smartDevice connectToDeviceBLE:self.centralManager]; // 连接到设备蓝牙
     [self.navigationController pushViewController:self.device_view animated:YES]; // 跳转到设备窗口
 }
 
@@ -274,7 +273,6 @@
         CBPeripheral *tempPeripheral = self.smartDevice[i].baseInfo.peripheral;
         if ([peripheral.identifier.UUIDString isEqualToString:tempPeripheral.identifier.UUIDString]) {
             [self.smartDevice objectAtIndex:i].baseInfo = baseInfo; // 更新设备基本信息
-//            [self.smartDevice replaceObjectAtIndex:i withObject:device];//更新数组中的数据
             [UIView performWithoutAnimation:^{ // 无动画
                 NSIndexPath *index = [NSIndexPath indexPathForRow:i inSection:0];
                 [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:index] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
@@ -295,13 +293,6 @@
     [self.smartDevice addObject:smartDevice]; // 添加该设备到数组
     NSIndexPath *newIndexPath = [NSIndexPath indexPathForRow:[self.smartDevice indexOfObject:smartDevice] inSection:0];
     [self.table insertRowsAtIndexPaths:[NSArray arrayWithObject:newIndexPath] withRowAnimation:UITableViewRowAnimationLeft];//插入Cell
-    
-//    if(![self.device containsObject:device]) // 没有添加过的设备
-//    {
-//        [self.device addObject:device]; // 添加该设备到数组
-//        NSIndexPath *newIndexPath = [NSIndexPath indexPathForRow:[self.device indexOfObject:device] inSection:0];
-//        [self.table insertRowsAtIndexPaths:[NSArray arrayWithObject:newIndexPath] withRowAnimation:UITableViewRowAnimationLeft];//插入Cell
-//    }
 }
 
 // 已经连接设备
@@ -314,6 +305,11 @@
     }
     
     NSLog(@"Connected to %@", peripheral.name);
+}
+
+// 连接失败
+-(void)centralManager:(CBCentralManager *)central didFailToConnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
+    
 }
 
 // 断开连接

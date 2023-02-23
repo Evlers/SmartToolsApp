@@ -38,7 +38,7 @@
 
 @interface SmartDevice () <CBPeripheralDelegate, SmartProtocolDelegate>
 
-@property (nonatomic, strong) dispatch_block_t  conTimeoutBlock;    // BLE连接超时执行块
+@property (nonatomic, strong) dispatch_block_t  conTimeoutBlock;    // 设备连接超时执行块
 @property (nonatomic, strong) NSString          *service_uuid;      // 服务 UUID
 @property (nonatomic, strong) NSString          *upload_uuid;       // 上报特征 UUID
 @property (nonatomic, strong) NSString          *download_uuid;     // 下发特征 UUID
@@ -60,6 +60,18 @@
     return self;
 }
 
+// 连接到设备蓝牙
+- (void)connectToDeviceBLE:(CBCentralManager *)centralManager {
+    [centralManager connectPeripheral:self.baseInfo.peripheral options:nil]; // 连接设备蓝牙
+    // 创建超时任务，在指定时间内需要完成设备的握手连接
+    self.conTimeoutBlock = dispatch_block_create(DISPATCH_BLOCK_BARRIER , ^{ // 创建超时连接的定时任务块
+        self.baseInfo.state = SmartDeviceConnectTimeout;
+        if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
+            [self.delegate smartDevice:self didUpdateState:SmartDeviceConnectTimeout];
+    });
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 10 * NSEC_PER_SEC), dispatch_get_main_queue(), self.conTimeoutBlock); // 10秒后进入超时处理
+}
+
 //  已连接到设备蓝牙
 - (void)BLEConnected {
     
@@ -79,14 +91,6 @@
     
     self.baseInfo.peripheral.delegate = self; // 设置代理
     [self.baseInfo.peripheral discoverServices:nil]; // 扫描服务
-    
-    // 创建超时任务，在指定时间内需要完成设备的握手连接
-    self.conTimeoutBlock = dispatch_block_create(DISPATCH_BLOCK_BARRIER , ^{ // 创建超时连接的定时任务块
-        self.baseInfo.state = SmartDeviceConnectTimeout;
-        if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
-            [self.delegate smartDevice:self didUpdateState:SmartDeviceConnectTimeout];
-    });
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 10 * NSEC_PER_SEC), dispatch_get_main_queue(), self.conTimeoutBlock); // 10秒后进入超时处理
 }
 
 // 已断开设备蓝牙连接

@@ -28,6 +28,8 @@
 @property (nonatomic, strong) SmartDevice *smartDevice;
 
 
+-(void)BLEConnectFailed;
+
 @end
 
 #endif /* SmartDeviceVC_h */

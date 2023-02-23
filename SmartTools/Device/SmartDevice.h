@@ -60,6 +60,9 @@
 
 - (SmartDevice *)init;
 
+// 连接到设备蓝牙
+- (void)connectToDeviceBLE:(CBCentralManager *)centralManager;
+
 // 已连接到设备蓝牙(中心管理器代理中调用)
 - (void)BLEConnected;
 
