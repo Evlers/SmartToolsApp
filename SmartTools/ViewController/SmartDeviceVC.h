@@ -24,8 +24,9 @@
 
 @interface SmartDeviceVC : UIViewController
 
-@property (nonatomic, strong) CBCentralManager *centralManager;
-@property (nonatomic, strong) Device *device;
+//@property (nonatomic, strong) CBCentralManager *centralManager;
+@property (nonatomic, strong) SmartDevice *smartDevice;
+
 
 @end
 

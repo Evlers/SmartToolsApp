@@ -41,7 +41,7 @@
 
 @interface SmartDeviceVC () <UITableViewDelegate, UITableViewDataSource, SmartDeviceDelegate>
 
-@property (nonatomic, strong) SmartDevice *smart_device;
+//@property (nonatomic, strong) SmartDevice *smart_device;
 @property (nonatomic, strong) UIAlertController *alert;     // 提示窗口
 @property (nonatomic, strong) UITableView *table;           // 功能列表视图
 @property (nonatomic, strong) NSMutableArray *data_point;   // 数据点,嵌套可变数组,第一级为 Table 组
@@ -75,19 +75,16 @@
 // 即将进入视图
 -(void)viewWillAppear:(BOOL)animated {
     
-//    [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
-    if (self.device.peripheral.state == CBPeripheralStateConnected) return ; // 如果已连接则不执行以下处理
-    
-    self.smart_device = [[SmartDevice alloc]initWithCentralManager:self.centralManager]; // 创建智能设备
-    self.smart_device.delegate = self; // 代理智能设备接口
-    self.smart_device.device = self.device; // 复制设备信息
-    [self.smart_device connectDevice:self.device]; // 连接设备
-    
-    self.alert = [UIAlertController alertControllerWithTitle:@"Cconnecting" message:@"Connect device.." preferredStyle:UIAlertControllerStyleAlert];
-    [self presentViewController:self.alert animated:YES completion:nil]; // 显示提示窗口
+    self.smartDevice.delegate = self; // 代理智能设备接口
+    if (self.smartDevice.baseInfo.peripheral.state == CBPeripheralStateConnected) // 如果已连接
+        [self.smartDevice getDeviceAllData]; // 查询所有设备信息
+    else { // 未连接，等待设备连接
+        self.alert = [UIAlertController alertControllerWithTitle:@"Cconnecting" message:@"Connect device.." preferredStyle:UIAlertControllerStyleAlert];
+        [self presentViewController:self.alert animated:YES completion:nil]; // 显示提示窗口
+    }
     
     // 配置数据点列表
-//    [self.data_point removeAllObjects];
+    [self.data_point removeAllObjects];
     [self.table reloadData];
     
     // device base info
@@ -115,15 +112,15 @@
     [self.table insertSections:[NSIndexSet indexSetWithIndex:self.data_point.count-1] withRowAnimation:UITableViewRowAnimationLeft]; // 插入数据
     
     // 组合设备名
-    uint8_t capacity = self.device.manufacture_data->capacity_value * 0.5 + 1.5; // 计算电池容量
+    uint8_t capacity = self.smartDevice.baseInfo.manufacture_data->capacity_value * 0.5 + 1.5; // 计算电池容量
     NSString *dev_name = [NSString stringWithFormat:@"%@ %dAH",
-                          self.device.product_info.default_name, capacity];
+                          self.smartDevice.baseInfo.product_info.default_name, capacity];
     self.title = dev_name; // 刷新标题
 }
 
 // 已经离开此页面
 - (void)viewDidDisappear:(BOOL)animated {
-    [self.smart_device disconnectDevice]; // 断开设备连接
+//    [self.smartDevice disconnectDevice]; // 断开设备连接
 }
 
 #pragma mark -- TableView 接口
@@ -273,7 +270,7 @@
     self.upgradeProgress.progress = 0;
     [self.alertFirmwareUpgrade.view addSubview:self.upgradeProgress];
     
-    if ([self.smart_device startFirmwareUpgrade:self.upgradeFile[self.upgrqadeFileSelect].path] == false) {// 开始升级智能设备
+    if ([self.smartDevice startFirmwareUpgrade:self.upgradeFile[self.upgrqadeFileSelect].path] == false) {// 开始升级智能设备
         return ;
     }
     
@@ -339,7 +336,7 @@
 }
 
 // 设备固件升级进度
-- (void)smartDeviceUpgradeProgress:(float)progress {
+- (void)smartDevice:(SmartDevice *)device upgradeProgress:(float)progress {
     self.upgradeProgress.progress = progress;
     self.alertFirmwareUpgrade.title = [NSString stringWithFormat:@"updating... %u%%", (uint32_t)(progress * 100.0)];
 }
@@ -347,20 +344,20 @@
 // 搜索当前连接的智能设备可用的升级文件
 - (void)searchUpgradeFile {
     
-    if (self.smart_device.device.hardware_version == nil) return ; // 硬件版本号是否已就绪
-    if (self.smart_device.device.app_firmware_version == nil) return ; // 固件版本号是否已就绪
+    if (self.smartDevice.baseInfo.hardware_version == nil) return ; // 硬件版本号是否已就绪
+    if (self.smartDevice.baseInfo.app_firmware_version == nil) return ; // 固件版本号是否已就绪
     
-    NSData *device_pid = [NSData dataWithBytes:self.smart_device.device.manufacture_data->product_id length:sizeof(self.smart_device.device.manufacture_data->product_id)];
+    NSData *device_pid = [NSData dataWithBytes:self.smartDevice.baseInfo.manufacture_data->product_id length:sizeof(self.smartDevice.baseInfo.manufacture_data->product_id)];
     NSDictionary<NSString *, id> *filtration = @{@"product id": device_pid,
-                                                 @"hardware version": self.smart_device.device.hardware_version,
-                                                 @"bootloader firmware version": self.smart_device.device.boot_firmware_version,
-                                                 @"application firmware version": self.smart_device.device.app_firmware_version
+                                                 @"hardware version": self.smartDevice.baseInfo.hardware_version,
+                                                 @"bootloader firmware version": self.smartDevice.baseInfo.boot_firmware_version,
+                                                 @"application firmware version": self.smartDevice.baseInfo.app_firmware_version
     };
     self.upgradeFile = [Firmware getAvaliableFirmwareInAllFile:self.allFileInfo filtration:filtration]; // 通过筛选项获取当前连接设备可用的固件
 }
 
 // 智能设备数据更新
-- (void)smartDeviceDataUpdate:(NSDictionary <NSString *, id>*)data; {
+- (void)smartDevice:(SmartDevice *)device dataUpdate:(NSDictionary <NSString *, id>*)data; {
     
     NSIndexPath *index = nil;
     
@@ -381,7 +378,7 @@
         } else if ([key containsString:@"Hardware version"]) { // 硬件版本
             [self searchUpgradeFile]; // 搜索可用的升级文件
             UITableViewCellAccessoryType type = (self.upgradeFile == nil || self.upgradeFile.count == 0) ? UITableViewCellAccessoryNone : UITableViewCellAccessoryDisclosureIndicator;
-            index = [self set_data_poinit:@"Firmware version" value:self.smart_device.device.app_firmware_version type:type]; // 设置固件版本Cell
+            index = [self set_data_poinit:@"Firmware version" value:self.smartDevice.baseInfo.app_firmware_version type:type]; // 设置固件版本Cell
             [UIView performWithoutAnimation:^{ // 无动画
                 [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:index] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
             }];
@@ -404,7 +401,8 @@
 }
 
 // 智能设备状态已更新
-- (void)smartDeviceDidUpdateState:(SmartDeviceState)state {
+- (void)smartDevice:(SmartDevice *)device didUpdateState:(SmartDeviceState)state {
+    
     switch (state)
     {
         case SmartDeviceBLEServiceError:

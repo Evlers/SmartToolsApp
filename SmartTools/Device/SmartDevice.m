@@ -23,7 +23,11 @@
 
 @end
 
-@implementation Device
+@implementation SmartBattery
+
+@end
+
+@implementation DeviceBaseInfo
 
 @end
 
@@ -32,10 +36,9 @@
 @end
 
 
-@interface SmartDevice () <CBCentralManagerDelegate, CBPeripheralDelegate, SmartProtocolDelegate>
+@interface SmartDevice () <CBPeripheralDelegate, SmartProtocolDelegate>
 
 @property (nonatomic, strong) dispatch_block_t  conTimeoutBlock;    // BLE连接超时执行块
-@property (nonatomic, strong) CBCentralManager  *centralManager;    // 中心管理
 @property (nonatomic, strong) NSString          *service_uuid;      // 服务 UUID
 @property (nonatomic, strong) NSString          *upload_uuid;       // 上报特征 UUID
 @property (nonatomic, strong) NSString          *download_uuid;     // 下发特征 UUID
@@ -48,60 +51,52 @@
 
 @implementation SmartDevice
 
-- (SmartDevice *)initWithCentralManager:(CBCentralManager *)centralManager {
+- (SmartDevice *)init {
     self.smart_protocol = [[SmartProtocol alloc]init];
     self.smart_protocol.delegate = self;
     self.send_queue = [NSMutableArray array];
-    self.centralManager = centralManager;
+    if (self.baseInfo.product_info.type == SmartDeviceProductTypeBattery) // 电池包产品
+        self.battery = [SmartBattery alloc]; // 创建电池包信息
     return self;
 }
 
-// 连接设备
-- (void)connectDevice:(Device *)device {
+//  已连接到设备蓝牙
+- (void)BLEConnected {
     
-    self.device = device; // 保存连接的设备
-    self.centralManager.delegate = self; // 代理中心管理器
+    self.baseInfo.state = SmartDeviceBLEConnected;
+    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
+        [self.delegate smartDevice:self didUpdateState:SmartDeviceBLEConnected]; // 蓝牙已连接
     
-    if (self.device.manufacture_data->uuid_flag == 0x5A) { // 使用自定义UUID
-        self.service_uuid = [NSString stringWithFormat:@"%04X", self.device.manufacture_data->server_uiud];
-        self.upload_uuid = [NSString stringWithFormat:@"%04X", self.device.manufacture_data->upload_uuid];
-        self.download_uuid = [NSString stringWithFormat:@"%04X", self.device.manufacture_data->download_uuid];
+    if (self.baseInfo.manufacture_data->uuid_flag == 0x5A) { // 使用自定义UUID
+        self.service_uuid = [NSString stringWithFormat:@"%04X", self.baseInfo.manufacture_data->server_uiud];
+        self.upload_uuid = [NSString stringWithFormat:@"%04X", self.baseInfo.manufacture_data->upload_uuid];
+        self.download_uuid = [NSString stringWithFormat:@"%04X", self.baseInfo.manufacture_data->download_uuid];
     } else { // 使用默认的UUID
         self.service_uuid = DEFAULT_SERVIICE_UUID;
         self.upload_uuid = DEFAULT_UPLOAD_UUID;
         self.download_uuid = DEFAULT_DOWNLOAD_UUID;
     }
     
-    if (self.centralManager.state == CBManagerStatePoweredOn) { // 如果中心管理器已经准备好
-        [self connectPeripheral:self.device.peripheral];
-    }
-}
-
-// 断开设备连接
-- (void)disconnectDevice {
-    dispatch_block_cancel(self.conTimeoutBlock); // 取消超时任务
-    [self.centralManager cancelPeripheralConnection:self.device.peripheral]; // 断开BLE连接
-}
-
-// 连接蓝牙外围设备
-- (void)connectPeripheral:(CBPeripheral *)peripheral {
-    
-    [self.centralManager stopScan]; // 停止扫描
-    if (self.device.peripheral.state != CBPeripheralStateConnected){ // 如果没有连接
-        [self.centralManager connectPeripheral:peripheral options:nil]; // 连接设备
-    } else { // 该设备已经是连接状态
-        peripheral.delegate = self; // 设置代理
-        [peripheral discoverServices:nil]; // 扫描服务
-        NSLog(@"Connected to %@", peripheral.name);
-        [self.delegate smartDeviceDidUpdateState:SmartDeviceBLEConnected];
-    }
+    self.baseInfo.peripheral.delegate = self; // 设置代理
+    [self.baseInfo.peripheral discoverServices:nil]; // 扫描服务
     
     // 创建超时任务，在指定时间内需要完成设备的握手连接
     self.conTimeoutBlock = dispatch_block_create(DISPATCH_BLOCK_BARRIER , ^{ // 创建超时连接的定时任务块
-        [self.centralManager cancelPeripheralConnection:peripheral]; // 断开BLE连接
-        [self.delegate smartDeviceDidUpdateState:SmartDeviceConnectTimeout];
+        self.baseInfo.state = SmartDeviceConnectTimeout;
+        if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
+            [self.delegate smartDevice:self didUpdateState:SmartDeviceConnectTimeout];
     });
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 10 * NSEC_PER_SEC), dispatch_get_main_queue(), self.conTimeoutBlock); // 10秒后进入超时处理
+}
+
+// 已断开设备蓝牙连接
+- (void)BLEdisconnected {
+    
+    self.baseInfo.state = SmartDeviceConnectTimeout;
+    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
+        [self.delegate smartDevice:self didUpdateState:SmartDeviceBLEDisconnected]; // 已断开蓝牙连接
+    
+    dispatch_block_cancel(self.conTimeoutBlock); // 取消超时任务
 }
 
 // 开始固件更新
@@ -135,6 +130,38 @@
     
     [self.smart_protocol send_frame_with_fcb:FCB_DEFAULT body:&body]; // 发送升级请求
     free(body.data);
+}
+
+// 查询设备所有数据
+- (void)getDeviceAllData {
+    [self.smart_protocol send_get_command:SP_CODE_BAT_TEMP];            // 发送电池温度查询指令
+    [self.smart_protocol send_get_command:SP_CODE_FIRMWARE_VER];        // 发送固件版本查询指令
+    [self.smart_protocol send_get_command:SP_CODE_HARDWARE_VER];        // 发送硬件版本查询指令
+    [self.smart_protocol send_get_command:SP_CODE_DEV_UUID];            // 发送设备UIUD查询指令
+    [self.smart_protocol send_get_command:SP_CODE_PROTECT_VOLT];        // 发送电池保护电压查询指令
+    [self.smart_protocol send_get_command:SP_CODE_MAX_DISCHARGE_CUR];   // 发送最大放电电流查询指令
+    [self.smart_protocol send_get_command:SP_CODE_FUNCTION_SW];         // 发送功能开关状态查询指令
+    [self.smart_protocol send_get_command:SP_CODE_WORK_MODE];           // 发送工作模式查询指令
+    [self.smart_protocol send_get_command:SP_CODE_WORK_TIME];           // 发送工作时间查询指令
+    [self.smart_protocol send_get_command:SP_CODE_CHARGE_TIMES];        // 发送充电次数查询指令
+    [self.smart_protocol send_get_command:SP_CODE_DISCHARGE_TIMES];     // 发送放电次数查询指令
+    [self.smart_protocol send_get_command:SP_CODE_CURRENT_CUR];         // 发送当前电流查询指令
+    [self.smart_protocol send_get_command:SP_CODE_CURRENT_PER];         // 发送当前电量查询指令
+    [self.smart_protocol send_get_command:SP_CODE_BATTERY_STATUS];      // 发送电池包状态查询指令
+}
+
+// 查询设备基本信息
+- (void)getDeviceBaseInfo {
+    [self.smart_protocol send_get_command:SP_CODE_FIRMWARE_VER];        // 发送固件版本查询指令
+    [self.smart_protocol send_get_command:SP_CODE_HARDWARE_VER];        // 发送硬件版本查询指令
+    [self.smart_protocol send_get_command:SP_CODE_DEV_UUID];            // 发送设备UIUD查询指令
+}
+
+// 查询电池包基本信息
+- (void)getBattreyBaseInfo {
+    [self.smart_protocol send_get_command:SP_CODE_BATTERY_STATUS];      // 发送电池包状态查询指令
+    [self.smart_protocol send_get_command:SP_CODE_BAT_TEMP];            // 发送电池温度查询指令
+    [self.smart_protocol send_get_command:SP_CODE_CURRENT_PER];         // 发送当前电量查询指令
 }
 
 #pragma mark -- Smart battery package protocool interface
@@ -172,67 +199,53 @@
 // 设备指令处理
 - (void)commandHandler:(uint8_t) code body:(protocol_body_t *) body {
     
-    if (self.delegate == nil || [self.delegate respondsToSelector:@selector(smartDeviceDataUpdate:)] == false) {
+    if (self.delegate == nil || [self.delegate respondsToSelector:@selector(smartDevice:dataUpdate:)] == false) {
         return ;
     }
     
     switch (code)
     {
         case SP_CODE_CONNECT: // 握手连接
-            // 查询设备所有参数
-            [self.smart_protocol send_get_command:SP_CODE_BAT_TEMP];            // 发送电池温度查询指令
-            [self.smart_protocol send_get_command:SP_CODE_FIRMWARE_VER];        // 发送固件版本查询指令
-            [self.smart_protocol send_get_command:SP_CODE_HARDWARE_VER];        // 发送硬件版本查询指令
-            [self.smart_protocol send_get_command:SP_CODE_DEV_UUID];            // 发送设备UIUD查询指令
-            [self.smart_protocol send_get_command:SP_CODE_PROTECT_VOLT];        // 发送电池保护电压查询指令
-            [self.smart_protocol send_get_command:SP_CODE_MAX_DISCHARGE_CUR];   // 发送最大放电电流查询指令
-            [self.smart_protocol send_get_command:SP_CODE_FUNCTION_SW];         // 发送功能开关状态查询指令
-            [self.smart_protocol send_get_command:SP_CODE_WORK_MODE];           // 发送工作模式查询指令
-            [self.smart_protocol send_get_command:SP_CODE_WORK_TIME];           // 发送工作时间查询指令
-            [self.smart_protocol send_get_command:SP_CODE_CHARGE_TIMES];        // 发送充电次数查询指令
-            [self.smart_protocol send_get_command:SP_CODE_DISCHARGE_TIMES];     // 发送放电次数查询指令
-            [self.smart_protocol send_get_command:SP_CODE_CURRENT_CUR];         // 发送当前电流查询指令
-            [self.smart_protocol send_get_command:SP_CODE_CURRENT_PER];         // 发送当前电量查询指令
-            [self.smart_protocol send_get_command:SP_CODE_BATTERY_STATUS];      // 发送电池包状态查询指令
-            
             dispatch_block_cancel(self.conTimeoutBlock); // 取消超时任务
             
-            [self.delegate smartDeviceDataUpdate:@{@"Handshake connection": self.device}];
-            if ([self.delegate respondsToSelector:@selector(smartDeviceDidUpdateState:)]) {
-                [self.delegate smartDeviceDidUpdateState:SmartDeviceConnectSuccess];
-            }
+            self.baseInfo.state = SmartDeviceConnectSuccess;
+            [self.delegate smartDevice:self dataUpdate:@{@"Handshake connection": self.baseInfo}];
+            if ([self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
+                [self.delegate smartDevice:self didUpdateState:SmartDeviceConnectSuccess];
+            
+            [self getDeviceAllData];// 查询设备所有参数
             break;
             
         case SP_CODE_FIRMWARE_VER: // 设备应答固件版本信息
            if (body->len == 6) {
-               self.device.boot_firmware_version = [NSString stringWithFormat:@"v%d.%d.%d", body->data[0], body->data[1], body->data[2]];
-               self.device.app_firmware_version = [NSString stringWithFormat:@"v%d.%d.%d", body->data[3], body->data[4], body->data[5]];
-               NSArray *version_info = [[NSArray alloc]initWithObjects:self.device.boot_firmware_version, self.device.app_firmware_version, nil];
-               [self.delegate smartDeviceDataUpdate:@{@"Firmware version" : version_info}];
+               self.baseInfo.boot_firmware_version = [NSString stringWithFormat:@"v%d.%d.%d", body->data[0], body->data[1], body->data[2]];
+               self.baseInfo.app_firmware_version = [NSString stringWithFormat:@"v%d.%d.%d", body->data[3], body->data[4], body->data[5]];
+               NSArray *version_info = [[NSArray alloc]initWithObjects:self.baseInfo.boot_firmware_version, self.baseInfo.app_firmware_version, nil];
+               [self.delegate smartDevice:self dataUpdate:@{@"Firmware version" : version_info}];
             }
             break;
             
         case SP_CODE_HARDWARE_VER: // 设备应答硬件版本信息
             if (body->len == 3) {
-                self.device.hardware_version = [NSString stringWithFormat:@"v%d.%d.%d", body->data[0], body->data[1], body->data[2]];
-                [self.delegate smartDeviceDataUpdate:@{@"Hardware version" : self.device.hardware_version}];
+                self.baseInfo.hardware_version = [NSString stringWithFormat:@"v%d.%d.%d", body->data[0], body->data[1], body->data[2]];
+                [self.delegate smartDevice:self dataUpdate:@{@"Hardware version" : self.baseInfo.hardware_version}];
             }
             break;
             
         case SP_CODE_DEV_UUID:
             if (body->len == 12) {
-                self.device.uuid = [NSString stringWithFormat:@"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+                self.baseInfo.uuid = [NSString stringWithFormat:@"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
                                          body->data[0], body->data[1], body->data[2], body->data[3], body->data[4], body->data[5],
                                          body->data[6], body->data[7], body->data[8], body->data[9], body->data[10], body->data[11]];
-                [self.delegate smartDeviceDataUpdate:@{@"Device uuid" : self.device.uuid}];
+                [self.delegate smartDevice:self dataUpdate:@{@"Device uuid" : self.baseInfo.uuid}];
             }
             break;
             
         case SP_CODE_BAT_TEMP:
             if (body->len == sizeof(int16_t)) {
                 int16_t bat_temp = body->data[0] | (((uint16_t)body->data[1]) << 8);
-                NSString *temperature = [NSString stringWithFormat:@"%0.1f°C", (float)bat_temp / 10.0];
-                [self.delegate smartDeviceDataUpdate:@{@"Battery temperature" : temperature}];
+                self.battery.temperature = [NSString stringWithFormat:@"%0.1f°C", (float)bat_temp / 10.0];
+                [self.delegate smartDevice:self dataUpdate:@{@"Battery temperature" : self.battery.temperature}];
             }
             break;
             
@@ -240,7 +253,7 @@
             if (body->len == sizeof(uint16_t)) {
                 uint16_t volt = body->data[0] | (((uint16_t)body->data[1]) << 8);
                 NSString *voltage = [NSString stringWithFormat:@"%0.2fV", (float)volt / 1000.0];
-                [self.delegate smartDeviceDataUpdate:@{@"Protection voltage" : voltage}];
+                [self.delegate smartDevice:self dataUpdate:@{@"Protection voltage" : voltage}];
             }
             break;
             
@@ -248,7 +261,7 @@
             if (body->len == sizeof(uint16_t)) {
                 uint16_t cur = body->data[0] | (((uint16_t)body->data[1]) << 8);
                 NSString *current = [NSString stringWithFormat:@"%uA", cur];
-                [self.delegate smartDeviceDataUpdate:@{@"Maximum discharge current" : current}];
+                [self.delegate smartDevice:self dataUpdate:@{@"Maximum discharge current" : current}];
             }
             break;
             
@@ -257,7 +270,7 @@
                 uint32_t sw = body->data[0] | (((uint32_t)body->data[1]) << 8) |
                 (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
                 NSString *fun_sw = [NSString stringWithFormat:@"BM[%08X]", sw];
-                [self.delegate smartDeviceDataUpdate:@{@"Function switch" : fun_sw}];
+                [self.delegate smartDevice:self dataUpdate:@{@"Function switch" : fun_sw}];
             }
             break;
             
@@ -266,14 +279,13 @@
                 uint32_t status = body->data[0] | (((uint32_t)body->data[1]) << 8) |
                 (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
                 uint8_t bat_io_sta = status & 0x00000003;
-                NSString *bat_sta;
                 switch (bat_io_sta)
                 {
-                    case 0: bat_sta = [NSString stringWithFormat:@"Standby"]; break;
-                    case 1: bat_sta = [NSString stringWithFormat:@"Charger"]; break;
-                    case 2: bat_sta = [NSString stringWithFormat:@"Discharger"]; break;
+                    case 0: self.battery.state = [NSString stringWithFormat:@"Standby"]; break;
+                    case 1: self.battery.state = [NSString stringWithFormat:@"Charging"]; break;
+                    case 2: self.battery.state = [NSString stringWithFormat:@"Discharging"]; break;
                 }
-                [self.delegate smartDeviceDataUpdate:@{@"Battery status" : bat_sta}];
+                [self.delegate smartDevice:self dataUpdate:@{@"Battery status" : self.battery.state}];
             }
             break;
             
@@ -281,7 +293,7 @@
             if (body->len == sizeof(uint8_t)) {
                 uint8_t mode = body->data[0];
                 NSString *work_mode = [NSString stringWithFormat:@"%d", mode];
-                [self.delegate smartDeviceDataUpdate:@{@"Work mode" : work_mode}];
+                [self.delegate smartDevice:self dataUpdate:@{@"Work mode" : work_mode}];
             }
             break;
             
@@ -290,7 +302,7 @@
                 uint32_t times = body->data[0] | (((uint32_t)body->data[1]) << 8) |
                 (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
                 NSString *charger_times = [NSString stringWithFormat:@"%u", times];
-                [self.delegate smartDeviceDataUpdate:@{@"Charger times" : charger_times}];
+                [self.delegate smartDevice:self dataUpdate:@{@"Charger times" : charger_times}];
             }
             break;
             
@@ -299,7 +311,7 @@
                 uint32_t times = body->data[0] | (((uint32_t)body->data[1]) << 8) |
                 (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
                 NSString *discharger_times = [NSString stringWithFormat:@"%u", times];
-                [self.delegate smartDeviceDataUpdate:@{@"Discharger times" : discharger_times}];
+                [self.delegate smartDevice:self dataUpdate:@{@"Discharger times" : discharger_times}];
             }
             break;
             
@@ -308,7 +320,7 @@
                 uint32_t time = body->data[0] | (((uint32_t)body->data[1]) << 8) |
                 (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
                 NSString *work_time = [NSString stringWithFormat:@"%u hour", time];
-                [self.delegate smartDeviceDataUpdate:@{@"Work time" : work_time}];
+                [self.delegate smartDevice:self dataUpdate:@{@"Work time" : work_time}];
             }
             break;
             
@@ -317,15 +329,15 @@
                 uint32_t cur = body->data[0] | (((uint32_t)body->data[1]) << 8) |
                 (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
                 NSString *current = [NSString stringWithFormat:@"%0.2fA", (float)cur / 1000.0];
-                [self.delegate smartDeviceDataUpdate:@{@"Current current" : current}];
+                [self.delegate smartDevice:self dataUpdate:@{@"Current current" : current}];
             }
             break;
             
         case SP_CODE_CURRENT_PER:
             if (body->len == sizeof(uint8_t)) {
                 uint8_t percent = body->data[0];
-                NSString *bat_percent = [NSString stringWithFormat:@"%d%%", percent];
-                [self.delegate smartDeviceDataUpdate:@{@"Battery percent" : bat_percent}];
+                self.battery.percent = [NSString stringWithFormat:@"%d%%", percent];
+                [self.delegate smartDevice:self dataUpdate:@{@"Battery percent" : self.battery.percent}];
             }
             break;
             
@@ -333,7 +345,7 @@
         {
             NSData *body_code = [[NSData alloc]initWithBytes:&code length:1];
             NSData *body_data = [[NSData alloc]initWithBytes:body->data length:body->len];
-            [self.delegate smartDeviceDataUpdate:@{@"Unknown code" : @{@"body code" : body_code, @"body data" : body_data}}];
+            [self.delegate smartDevice:self dataUpdate:@{@"Unknown code" : @{@"body code" : body_code, @"body data" : body_data}}];
             return ;
         }
     }
@@ -468,8 +480,8 @@
         }
     }
     
-    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDeviceUpgradeStateUpdate:withResult:)]) {
-        [self.delegate smartDeviceUpgradeStateUpdate:upgradeState withResult:result];
+    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:upgradeStateUpdate:withResult:)]) {
+        [self.delegate smartDevice:self upgradeStateUpdate:upgradeState withResult:result];
     }
     
     free(res_body.data);
@@ -497,18 +509,18 @@
     free(trans_file_head.data);
     self.firmwareUpgrade.fileOffset += trans_file_head.length; // 计算下次发送的偏移量
     
-    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDeviceUpgradeProgress:)]) {
-        [self.delegate smartDeviceUpgradeProgress:(float)self.firmwareUpgrade.fileOffset / (float)firmwareFile.file_data.length];
+    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:upgradeProgress:)]) {
+        [self.delegate smartDevice:self upgradeProgress:(float)self.firmwareUpgrade.fileOffset / (float)firmwareFile.file_data.length];
     }
 }
 
 // 智能包协议数据帧下发接口
 - (void)SmartProtocolDataSend:(NSData *)data {
     if (self.write_char == nil) return ;
-    if (self.device.peripheral.canSendWriteWithoutResponse != true || self.send_queue.count != 0) { // BLE未就绪 或者 发送队列中还有数据未发送
+    if (self.baseInfo.peripheral.canSendWriteWithoutResponse != true || self.send_queue.count != 0) { // BLE未就绪 或者 发送队列中还有数据未发送
         [self.send_queue addObject:data]; // 保存数据等待就绪后发送
     } else { // 蓝牙就绪且队列已发送完
-        [self.device.peripheral writeValue:data forCharacteristic:self.write_char type:CBCharacteristicWriteWithoutResponse];
+        [self.baseInfo.peripheral writeValue:data forCharacteristic:self.write_char type:CBCharacteristicWriteWithoutResponse];
     }
 }
 
@@ -532,46 +544,6 @@
 
 #pragma mark -- BLE 接口
 
-// 中心管理器已改变状态
-- (void)centralManagerDidUpdateState:(CBCentralManager *)central {
-    if (central.state == CBManagerStatePoweredOn) {
-        if (self.device != nil)
-            [self connectPeripheral:self.device.peripheral];
-    }
-}
-
-// 已搜索到外围设备
-- (void)centralManager:(CBCentralManager *)central didDiscoverPeripheral:(CBPeripheral *)peripheral advertisementData:(NSDictionary<NSString *,id> *)advertisementData RSSI:(NSNumber *)RSSI {
-    
-}
-
-// 连接失败
-- (void)centralManager:(CBCentralManager *)central didFailToConnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
-    
-    [self.centralManager scanForPeripheralsWithServices:nil options:nil]; // 开始扫描设备
-    dispatch_block_cancel(self.conTimeoutBlock); // 取消超时任务
-    NSLog(@"Connect to %@ failed", error);
-    [self.delegate smartDeviceDidUpdateState:SmartDeviceBLEDisconnected];
-}
-
-// 断开连接
-- (void)centralManager:(CBCentralManager *)central didDisconnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
-    
-    dispatch_block_cancel(self.conTimeoutBlock); // 取消超时任务
-    NSLog(@"Disconnect is %@", peripheral.name);
-    [self.delegate smartDeviceDidUpdateState:SmartDeviceBLEDisconnected];
-    [self.send_queue removeAllObjects]; // 删除发送队列中的所有数据
-}
-
-// 已经连接设备
-- (void)centralManager:(CBCentralManager *)central didConnectPeripheral:(CBPeripheral *)peripheral {
-    
-    peripheral.delegate = self; // 设置代理
-    [peripheral discoverServices:nil]; // 扫描服务
-    NSLog(@"Connected to %@", peripheral.name);
-    [self.delegate smartDeviceDidUpdateState:SmartDeviceBLEConnected];
-}
-
 // 已经发现服务
 - (void)peripheral:(CBPeripheral *)peripheral didDiscoverServices:(NSError *)error {
     
@@ -585,9 +557,9 @@
     }
     
     NSLog(@"No service is found");
-    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDeviceDidUpdateState:)]) {
-        [self.delegate smartDeviceDidUpdateState:SmartDeviceBLEServiceError];
-    }
+    self.baseInfo.state = SmartDeviceBLEServiceError;
+    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
+        [self.delegate smartDevice:self didUpdateState:SmartDeviceBLEServiceError];
 }
 
 // 发现特征
@@ -616,11 +588,14 @@
     
     if (self.write_char == nil || discover_upload_uuid == false) {// 如果没发现写入特征或者上报特征
         NSLog(@"No write feature or report feature is found");
-        if (self.delegate && [self.delegate respondsToSelector:@selector(smartDeviceDidUpdateState:)]) {
-            [self.delegate smartDeviceDidUpdateState:SmartDeviceBLECharacteristicError];
-        }
-    } else if (self.delegate && [self.delegate respondsToSelector:@selector(smartDeviceDidUpdateState:)]) {
-        [self.delegate smartDeviceDidUpdateState:SmartDeviceBLEDiscoverCharacteristic];
+        self.baseInfo.state = SmartDeviceBLECharacteristicError;
+        if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
+            [self.delegate smartDevice:self didUpdateState:SmartDeviceBLECharacteristicError];
+        
+    } else {
+        self.baseInfo.state = SmartDeviceBLEDiscoverCharacteristic;
+        if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
+            [self.delegate smartDevice:self didUpdateState:SmartDeviceBLEDiscoverCharacteristic];
     }
 }
 
@@ -644,22 +619,22 @@
 // 已经更新通知状态
 - (void)peripheral:(CBPeripheral *)peripheral didUpdateNotificationStateForCharacteristic:(CBCharacteristic *)characteristic error:(nullable NSError *)error {
     NSLog(@"Did enable the notification state in the characteristic %@", characteristic.UUID.UUIDString);
-    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDeviceDidUpdateState:)]) {
-        [self.delegate smartDeviceDidUpdateState:SmartDeviceBLENotifyEnable];
-    }
-    NSLog(@"BLE Device maximum write value length: %ld", [self.device.peripheral maximumWriteValueLengthForType:CBCharacteristicWriteWithoutResponse]);
+    self.baseInfo.state = SmartDeviceBLENotifyEnable;
+    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
+        [self.delegate smartDevice:self didUpdateState:SmartDeviceBLENotifyEnable];
+    NSLog(@"BLE Device maximum write value length: %ld", [self.baseInfo.peripheral maximumWriteValueLengthForType:CBCharacteristicWriteWithoutResponse]);
     
-    NSData *aes_key_tail = [NSData dataWithBytes:self.device.manufacture_data->aes_key_tail length:8];
+    NSData *aes_key_tail = [NSData dataWithBytes:self.baseInfo.manufacture_data->aes_key_tail length:8];
     [self.smart_protocol aes_tail_key_set:aes_key_tail]; // 设置AES(ECB)密钥
     [self.smart_protocol send_connect]; // 发送握手连接
 }
 
 // 写入无应答数据已完成
 - (void)peripheralIsReadyToSendWriteWithoutResponse:(CBPeripheral *)peripheral {
-    if (self.send_queue.count) { // 队列中还有数据未发送
+    if (self.send_queue && self.send_queue.count) { // 队列中还有数据未发送
         NSData *send_data;
         send_data = [self.send_queue objectAtIndex:0]; // 获取一帧数据
-        [self.device.peripheral writeValue:send_data forCharacteristic:self.write_char type:CBCharacteristicWriteWithoutResponse]; // 发送数据
+        [self.baseInfo.peripheral writeValue:send_data forCharacteristic:self.write_char type:CBCharacteristicWriteWithoutResponse]; // 发送数据
         [self.send_queue removeObject:send_data]; // 删除已发送到数据
     }
 }

@@ -13,34 +13,26 @@
 #import "SmartDeviceStandard.h"
 #import "FirmwareFile.h"
 
-#pragma pack(push)
-#pragma pack(1)     // 字节对齐
-
-typedef struct
-{
-    uint16_t    company_id;             // 公司ID
-    uint8_t     uuid_flag;              // uuid 标志
-    uint16_t    server_uiud;            // 服务 uuid
-    uint16_t    download_uuid;          // 下发特征 uuid
-    uint16_t    upload_uuid;            // 上报特征 uuid
-    uint8_t     device_id[2];           // 设备 id
-    uint8_t     product_id[4];          // 产品 id
-    uint8_t     aes_key_tail[8];        // aes密钥后8字节
-    uint8_t     firmware_version[3];    // 固件版本
-    uint8_t     capacity_value;         // 电池包容量值
-} manufacture_data_t;
-
-#pragma pack(pop)
 
 @interface ProductInfo : NSObject
 
-@property (nonatomic, strong) NSString *default_name;   // 产品默认名称
-@property (nonatomic, strong) NSString *image;          // 产品图片
+@property (nonatomic, strong) NSString *default_name;       // 产品默认名称
+@property (nonatomic, strong) NSString *image;              // 产品图片
+@property (nonatomic, assign) SmartDeviceProductType type;  // 产品类型
 
 @end
 
-@interface Device : NSObject
+@interface SmartBattery : NSObject
 
+@property (nonatomic, strong) NSString *state;                      // 电池包当前状态
+@property (nonatomic, strong) NSString *temperature;                // 电池包当前温度 单位：摄氏度
+@property (nonatomic, strong) NSString *percent;                    // 电池当前电量 单位：%
+
+@end
+
+@interface DeviceBaseInfo : NSObject
+
+@property (nonatomic, assign) SmartDeviceState state;               // 设备状态
 @property (nonatomic, strong) ProductInfo *product_info;            // 产品信息
 @property (nonatomic, strong) CBPeripheral *peripheral;             // 蓝牙外围设备
 @property (nonatomic, assign) manufacture_data_t *manufacture_data; // 厂商自定义数据
@@ -61,16 +53,27 @@ typedef struct
 
 @interface SmartDevice : NSObject
 
-@property (nonatomic, strong) Device *device;
+@property (nonatomic, strong) DeviceBaseInfo *baseInfo;             // 设备基本信息
+@property (nonatomic, strong) SmartBattery *battery;                // 智能电池包
+
 @property (assign) id<SmartDeviceDelegate> delegate;
 
-- (SmartDevice *)initWithCentralManager:(CBCentralManager *)centralManager;
+- (SmartDevice *)init;
 
-// 连接智能设备
-- (void)connectDevice:(Device *)device;
+// 已连接到设备蓝牙(中心管理器代理中调用)
+- (void)BLEConnected;
 
-// 断开设备连接
-- (void)disconnectDevice;
+// 已断开设备蓝牙(中心管理器代理中调用)
+- (void)BLEdisconnected;
+
+// 查询设备所有数据
+- (void)getDeviceAllData;
+
+// 查询设备基本信息
+- (void)getDeviceBaseInfo;
+
+// 查询电池包基本信息
+- (void)getBattreyBaseInfo;
 
 // 开始固件升级
 - (bool)startFirmwareUpgrade:(NSString *)filePath;

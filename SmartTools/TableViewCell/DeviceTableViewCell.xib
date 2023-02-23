@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="21507" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+    <device id="retina6_12" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="21505"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="DeviceTableViewCell" rowHeight="100" id="rzV-5J-rAs" customClass="DeviceTableViewCell">
+            <rect key="frame" x="0.0" y="0.0" width="418" height="100"/>
+            <autoresizingMask key="autoresizingMask"/>
+            <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="rzV-5J-rAs" id="gQE-Ep-KcV">
+                <rect key="frame" x="0.0" y="0.0" width="418" height="100"/>
+                <autoresizingMask key="autoresizingMask"/>
+                <subviews>
+                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" image="电池包1" translatesAutoresizingMaskIntoConstraints="NO" id="dck-aZ-PB9">
+                        <rect key="frame" x="10" y="0.0" width="100" height="100"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                    </imageView>
+                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" image="放电中" translatesAutoresizingMaskIntoConstraints="NO" id="shu-Fa-w53">
+                        <rect key="frame" x="139" y="35" width="20" height="20.333333333333329"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                    </imageView>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Discharging" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="TzO-nF-60g">
+                        <rect key="frame" x="162" y="34" width="160" height="21"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <fontDescription key="fontDescription" type="system" pointSize="15"/>
+                        <color key="textColor" red="0.28349749147549835" green="0.57409750403494852" blue="0.86078917980194092" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" image="温度" translatesAutoresizingMaskIntoConstraints="NO" id="PZZ-c0-Sg9">
+                        <rect key="frame" x="139" y="70" width="23" height="20.666666666666671"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                    </imageView>
+                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" image="电量" translatesAutoresizingMaskIntoConstraints="NO" id="IIU-sF-gUv">
+                        <rect key="frame" x="260" y="70" width="23" height="20.666666666666671"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                    </imageView>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="--%" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="h50-D6-So9">
+                        <rect key="frame" x="291" y="70" width="64" height="21"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <fontDescription key="fontDescription" type="system" pointSize="15"/>
+                        <nil key="textColor"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="--°C" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Gw5-Er-3Vn">
+                        <rect key="frame" x="162" y="70" width="62" height="21"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <fontDescription key="fontDescription" type="system" pointSize="15"/>
+                        <nil key="textColor"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="SmartBatteryPackage" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="mkg-4J-OlT">
+                        <rect key="frame" x="139" y="5" width="279" height="22"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                        <nil key="textColor"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" image="蓝牙已连接" translatesAutoresizingMaskIntoConstraints="NO" id="hTu-M2-SK7">
+                        <rect key="frame" x="388" y="71" width="23" height="20"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                    </imageView>
+                    <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="jkP-up-VuH">
+                        <rect key="frame" x="139" y="62" width="189" height="35"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                        <state key="normal" title="Button"/>
+                        <buttonConfiguration key="configuration" style="plain"/>
+                    </button>
+                </subviews>
+            </tableViewCellContentView>
+            <connections>
+                <outlet property="bleImage" destination="hTu-M2-SK7" id="Zgp-HV-GL6"/>
+                <outlet property="connectBtn" destination="jkP-up-VuH" id="R6H-CW-T3g"/>
+                <outlet property="deviceImage" destination="dck-aZ-PB9" id="kAv-rS-pNo"/>
+                <outlet property="deviceName" destination="mkg-4J-OlT" id="fL5-0K-OCv"/>
+                <outlet property="percentIcon" destination="IIU-sF-gUv" id="4Dy-eK-fBb"/>
+                <outlet property="percentValue" destination="h50-D6-So9" id="Eqm-Fj-peL"/>
+                <outlet property="statusDescribe" destination="TzO-nF-60g" id="Cyy-HL-5wY"/>
+                <outlet property="statusIcon" destination="shu-Fa-w53" id="hA0-7Y-KpV"/>
+                <outlet property="tempIcon" destination="PZZ-c0-Sg9" id="eSQ-7I-c5L"/>
+                <outlet property="tempValue" destination="Gw5-Er-3Vn" id="JLj-Bz-YgU"/>
+            </connections>
+            <point key="canvasLocation" x="267.17557251908397" y="-52.816901408450704"/>
+        </tableViewCell>
+    </objects>
+    <resources>
+        <image name="放电中" width="200" height="200"/>
+        <image name="温度" width="200" height="200"/>
+        <image name="电池包1" width="3193" height="2103"/>
+        <image name="电量" width="200" height="200"/>
+        <image name="蓝牙已连接" width="200" height="200"/>
+    </resources>
+</document>
