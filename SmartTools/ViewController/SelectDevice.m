@@ -200,73 +200,28 @@
 // Tableview接口: 返回每行的数据
 -(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     
-    DeviceTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"DeviceTableViewCell"]; // 通过队列ID出列Cell
     DeviceBaseInfo *baseInfo = [self.smartDevice objectAtIndex:indexPath.section].baseInfo;
-    SmartBattery *battery = [self.smartDevice objectAtIndex:indexPath.section].battery;
     
-    uint8_t *dev_id = baseInfo.manufacture_data->device_id;
-    uint8_t capacity = baseInfo.manufacture_data->capacity_value * 0.5 + 1.5; // 计算电池容量
-    NSString *dev_name = [NSString stringWithFormat:@"%@ %dAH #%02X%02X", baseInfo.product_info.default_name, capacity, dev_id[0], dev_id[1]];
-
-    cell.deviceName.text = dev_name;
-//    cell.deviceImage.image = [UIImage imageNamed:[NSString stringWithFormat:@"BatPack%d.0", capacity]];
-    
-    if (baseInfo.state == SmartDeviceConnectSuccess)
+    switch (baseInfo.product_info.type)
     {
-        if (battery.temperature == nil && battery.state == nil && battery.percent == nil) { // 如果其中一个数据未准备好
-            [cell.connectBtn setTitle:@"Request data.." forState:UIControlStateNormal];
-            goto _exit;
+        case SmartDeviceProductTypeBattery: // 电池包设备
+        {
+            DeviceTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"DeviceTableViewCell"]; // 通过队列ID出列Cell
+            SmartBattery *battery = [self.smartDevice objectAtIndex:indexPath.section].battery;
+            
+            uint8_t *dev_id = baseInfo.manufacture_data->device_id;
+            uint8_t capacity = baseInfo.manufacture_data->capacity_value * 0.5 + 1.5; // 计算电池容量
+            NSString *dev_name = [NSString stringWithFormat:@"%@ %dAH #%02X%02X", baseInfo.product_info.default_name, capacity, dev_id[0], dev_id[1]];
+            
+            [cell setDeviceName:dev_name state:baseInfo.state info:battery]; // 设置基本信息
+            cell.connectBtn.tag = indexPath.section; // 记录按钮位置
+            [cell.connectBtn addTarget:self action:@selector(connectButtonClicked:) forControlEvents:UIControlEventTouchUpInside];
+            
+            return cell;
         }
-        cell.connectBtn.hidden = true;
-        cell.tempIcon.hidden = cell.percentIcon.hidden = cell.statusIcon.hidden = false;
-        cell.bleImage.image = [UIImage imageNamed:@"蓝牙已连接"];
-        if (battery.temperature)
-            cell.tempValue.text = battery.temperature;
-        if (battery.percent)
-            cell.percentValue.text = battery.percent;
-        if (battery.state) {
-            cell.statusDescribe.text = battery.state;
-            if ([battery.state isEqualToString:@"Standby"]) {
-                cell.statusIcon.image = [UIImage imageNamed:@"待机中"];
-                cell.statusDescribe.textColor = [UIColor colorWithHexString:@"FF9040"];
-            } else if ([battery.state isEqualToString:@"Charging"]) {
-                cell.statusIcon.image = [UIImage imageNamed:@"充电中"];
-                cell.statusDescribe.textColor = [UIColor colorWithHexString:@"6BD7B0"];
-            } else if ([battery.state isEqualToString:@"Discharging"]) {
-                cell.statusIcon.image = [UIImage imageNamed:@"放电中"];
-                cell.statusDescribe.textColor = [UIColor colorWithHexString:@"3E95D5"];
-            } else if ([battery.state isEqualToString:@"Charge complete"]) {
-                cell.statusIcon.image = [UIImage imageNamed:@"充电完成"];
-                cell.statusDescribe.textColor = [UIColor colorWithHexString:@"6BD7B0"];
-            }
-        }
+        
+        default: return nil;
     }
-    else
-    {
-        cell.connectBtn.hidden = false;
-        cell.tempValue.text = cell.percentValue.text = cell.statusDescribe.text = @"";
-        cell.tempIcon.hidden = cell.percentIcon.hidden = cell.statusIcon.hidden = true;
-        cell.bleImage.image = [UIImage imageNamed:@"蓝牙已断开"];
-        if (baseInfo.state == SmartDeviceBLEConnected)
-            [cell.connectBtn setTitle:@"Discover srervices.." forState:UIControlStateNormal];
-        else if (baseInfo.state == SmartDeviceBLEDiscoverServer)
-            [cell.connectBtn setTitle:@"Discover characteristics.." forState:UIControlStateNormal];
-        else if (baseInfo.state == SmartDeviceBLEDiscoverCharacteristic)
-            [cell.connectBtn setTitle:@"Enable nootify.." forState:UIControlStateNormal];
-        else if (baseInfo.state == SmartDeviceBLENotifyEnable)
-            [cell.connectBtn setTitle:@"Shaking.." forState:UIControlStateNormal];
-        else
-            [cell.connectBtn setTitle:@"Connect device" forState:UIControlStateNormal];
-        cell.connectBtn.layer.cornerRadius = 10.0; // 设置圆角的弧度
-        cell.connectBtn.layer.borderWidth = 1.0f; // 边宽
-        cell.connectBtn.layer.borderColor = [UIColor colorWithHexString:@"FF9040"].CGColor;
-        cell.connectBtn.backgroundColor = [UIColor colorWithHexString:@"FF9040" alpha:0.1];
-        cell.connectBtn.tag = indexPath.section; // 记录按钮位置
-        [cell.connectBtn addTarget:self action:@selector(connectButtonClicked:) forControlEvents:UIControlEventTouchUpInside];
-    }
-    
-    _exit:
-    return cell;
 }
 
 // Tableview接口:选中设备

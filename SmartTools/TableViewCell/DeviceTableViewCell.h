@@ -25,6 +25,8 @@
 
 +(instancetype)xibTableViewCell;
 
+- (void)setDeviceName:(NSString *)name state:(SmartDeviceState)state info:(SmartBattery *)battery;
+
 @end
 
 #endif /* DeviceTableViewCell_h */

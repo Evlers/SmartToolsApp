@@ -5,6 +5,7 @@
 //  Created by Evler on 2023/2/20.
 //
 
+#import "SmartDevice.h"
 #import "DeviceTableViewCell.h"
 
 //@interface DeviceTableViewCell()
@@ -17,6 +18,65 @@
     //在类方法中加载xib文件,注意:loadNibNamed:owner:options:这个方法返回的是NSArray,所以在后面加上firstObject或者lastObject或者[0]都可以；因为我们的XIB文件中，只有一个Cell
     return [[[NSBundle mainBundle] loadNibNamed:@"DeviceTableViewCell" owner:nil options:nil] lastObject];
  }
+
+- (void)setDeviceName:(NSString *)name state:(SmartDeviceState)state info:(SmartBattery *)battery {
+    
+    self.deviceName.text = name;
+//    cell.deviceImage.image = [UIImage imageNamed:[NSString stringWithFormat:@"BatPack%d.0", capacity]];
+    
+    if (state == SmartDeviceConnectSuccess)
+    {
+        if (battery.temperature == nil && battery.state == nil && battery.percent == nil) { // 如果其中一个数据未准备好
+            [self.connectBtn setTitle:@"Request data.." forState:UIControlStateNormal];
+            return ;
+        }
+        
+        self.connectBtn.hidden = true;
+        self.tempIcon.hidden = self.percentIcon.hidden = self.statusIcon.hidden = false;
+        self.bleImage.image = [UIImage imageNamed:@"蓝牙已连接"];
+        if (battery.temperature)
+            self.tempValue.text = battery.temperature;
+        if (battery.percent)
+            self.percentValue.text = battery.percent;
+        if (battery.state) {
+            self.statusDescribe.text = battery.state;
+            if ([battery.state isEqualToString:@"Standby"]) {
+                self.statusIcon.image = [UIImage imageNamed:@"待机中"];
+                self.statusDescribe.textColor = [UIColor colorWithHexString:@"FF9040"];
+            } else if ([battery.state isEqualToString:@"Charging"]) {
+                self.statusIcon.image = [UIImage imageNamed:@"充电中"];
+                self.statusDescribe.textColor = [UIColor colorWithHexString:@"6BD7B0"];
+            } else if ([battery.state isEqualToString:@"Discharging"]) {
+                self.statusIcon.image = [UIImage imageNamed:@"放电中"];
+                self.statusDescribe.textColor = [UIColor colorWithHexString:@"3E95D5"];
+            } else if ([battery.state isEqualToString:@"Charge complete"]) {
+                self.statusIcon.image = [UIImage imageNamed:@"充电完成"];
+                self.statusDescribe.textColor = [UIColor colorWithHexString:@"6BD7B0"];
+            }
+        }
+    }
+    else
+    {
+        self.connectBtn.hidden = false;
+        self.tempValue.text = self.percentValue.text = self.statusDescribe.text = @"";
+        self.tempIcon.hidden = self.percentIcon.hidden = self.statusIcon.hidden = true;
+        self.bleImage.image = [UIImage imageNamed:@"蓝牙已断开"];
+        if (state == SmartDeviceBLEConnected)
+            [self.connectBtn setTitle:@"Discover srervices.." forState:UIControlStateNormal];
+        else if (state == SmartDeviceBLEDiscoverServer)
+            [self.connectBtn setTitle:@"Discover characteristics.." forState:UIControlStateNormal];
+        else if (state == SmartDeviceBLEDiscoverCharacteristic)
+            [self.connectBtn setTitle:@"Enable nootify.." forState:UIControlStateNormal];
+        else if (state == SmartDeviceBLENotifyEnable)
+            [self.connectBtn setTitle:@"Shaking.." forState:UIControlStateNormal];
+        else
+            [self.connectBtn setTitle:@"Connect device" forState:UIControlStateNormal];
+        self.connectBtn.layer.cornerRadius = 10.0; // 设置圆角的弧度
+        self.connectBtn.layer.borderWidth = 1.0f; // 边宽
+        self.connectBtn.layer.borderColor = [UIColor colorWithHexString:@"FF9040"].CGColor;
+        self.connectBtn.backgroundColor = [UIColor colorWithHexString:@"FF9040" alpha:0.1];
+    }
+}
 
 // 重新布局视图控件
 -(void)layoutSubviews {
