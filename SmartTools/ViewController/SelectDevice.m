@@ -213,6 +213,10 @@
     
     if (baseInfo.state == SmartDeviceConnectSuccess)
     {
+        if (battery.temperature == nil && battery.state == nil && battery.percent == nil) { // 如果其中一个数据未准备好
+            [cell.connectBtn setTitle:@"Request data.." forState:UIControlStateNormal];
+            goto _exit;
+        }
         cell.connectBtn.hidden = true;
         cell.tempIcon.hidden = cell.percentIcon.hidden = cell.statusIcon.hidden = false;
         cell.bleImage.image = [UIImage imageNamed:@"蓝牙已连接"];
@@ -228,9 +232,12 @@
             } else if ([battery.state isEqualToString:@"Charging"]) {
                 cell.statusIcon.image = [UIImage imageNamed:@"充电中"];
                 cell.statusDescribe.textColor = [UIColor colorWithHexString:@"6BD7B0"];
-            } else if([battery.state isEqualToString:@"Discharging"]) {
+            } else if ([battery.state isEqualToString:@"Discharging"]) {
                 cell.statusIcon.image = [UIImage imageNamed:@"放电中"];
                 cell.statusDescribe.textColor = [UIColor colorWithHexString:@"3E95D5"];
+            } else if ([battery.state isEqualToString:@"Charge complete"]) {
+                cell.statusIcon.image = [UIImage imageNamed:@"充电完成"];
+                cell.statusDescribe.textColor = [UIColor colorWithHexString:@"6BD7B0"];
             }
         }
     }
@@ -258,6 +265,7 @@
         [cell.connectBtn addTarget:self action:@selector(connectButtonClicked:) forControlEvents:UIControlEventTouchUpInside];
     }
     
+    _exit:
     return cell;
 }
 
