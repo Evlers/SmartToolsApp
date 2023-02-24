@@ -30,6 +30,11 @@
 //    UIGraphicsEndImageContext();
 }
 
+-(void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated {
+    // 不执行高亮动作
+//    [super setHighlighted:highlighted animated:animated];
+}
+
 - (void)setSelected:(BOOL)selected animated:(BOOL)animated {
     
 }

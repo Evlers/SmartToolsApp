@@ -27,9 +27,6 @@
 //@property (nonatomic, strong) CBCentralManager *centralManager;
 @property (nonatomic, strong) SmartDevice *smartDevice;
 
-
--(void)BLEConnectFailed;
-
 @end
 
 #endif /* SmartDeviceVC_h */

@@ -33,14 +33,14 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <tableView clipsSubviews="YES" tag="1" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="grouped" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="18" sectionFooterHeight="18" translatesAutoresizingMaskIntoConstraints="NO" id="nAm-dE-FH7">
-                                <rect key="frame" x="0.0" y="0.0" width="390" height="844"/>
+                                <rect key="frame" x="16" y="0.0" width="358" height="844"/>
                                 <color key="backgroundColor" red="0.94901960784313721" green="0.94901960784313721" blue="0.96862745098039216" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 <prototypes>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" reuseIdentifier="DeviceSelect" id="6Xn-lk-PoY">
-                                        <rect key="frame" x="0.0" y="55.333332061767578" width="390" height="43.666667938232422"/>
+                                        <rect key="frame" x="0.0" y="55.333332061767578" width="358" height="43.666667938232422"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="6Xn-lk-PoY" id="jaK-NO-dm7">
-                                            <rect key="frame" x="0.0" y="0.0" width="390" height="43.666667938232422"/>
+                                            <rect key="frame" x="0.0" y="0.0" width="358" height="43.666667938232422"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                         </tableViewCellContentView>
                                         <connections>
@@ -53,17 +53,17 @@
                         <viewLayoutGuide key="safeArea" id="Llv-lg-rMs"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
-                            <constraint firstAttribute="trailing" secondItem="nAm-dE-FH7" secondAttribute="trailing" id="EKh-jC-PH3"/>
-                            <constraint firstItem="nAm-dE-FH7" firstAttribute="leading" secondItem="iMd-7S-Z9X" secondAttribute="leading" id="FwD-NQ-Od4"/>
+                            <constraint firstAttribute="trailing" secondItem="nAm-dE-FH7" secondAttribute="trailing" constant="16" id="EKh-jC-PH3"/>
+                            <constraint firstItem="nAm-dE-FH7" firstAttribute="leading" secondItem="iMd-7S-Z9X" secondAttribute="leading" constant="16" id="FwD-NQ-Od4"/>
                             <constraint firstItem="nAm-dE-FH7" firstAttribute="bottom" secondItem="Llv-lg-rMs" secondAttribute="bottom" constant="34" id="IKo-lb-wwI"/>
                             <constraint firstItem="nAm-dE-FH7" firstAttribute="top" secondItem="iMd-7S-Z9X" secondAttribute="top" id="PSL-ir-9Gs"/>
                         </constraints>
                     </view>
-                    <navigationItem key="navigationItem" title="Smart Tools" id="2fO-Pe-kHc"/>
+                    <navigationItem key="navigationItem" title="Home page" id="2fO-Pe-kHc"/>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="ykY-nL-gX6" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="509.60000000000002" y="95.320197044334975"/>
+            <point key="canvasLocation" x="509.23076923076923" y="95.260663507109001"/>
         </scene>
         <!--Device-->
         <scene sceneID="3hR-BH-lwJ">
