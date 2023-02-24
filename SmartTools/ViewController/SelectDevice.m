@@ -130,7 +130,7 @@
 // 连接按钮单击
 - (void)connectButtonClicked:(UIButton *)btn {
     
-    if ([self.smartDevice objectAtIndex:btn.tag].baseInfo.peripheral.state == CBPeripheralStateConnected) return;
+    if ([self.smartDevice objectAtIndex:btn.tag].baseInfo.peripheral.state != CBPeripheralStateDisconnected) return;
     
     [btn setTitle:@"Connecting.." forState:UIControlStateNormal];
     [self.smartDevice objectAtIndex:btn.tag].delegate = self; // 代理智能设备接口

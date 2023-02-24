@@ -282,12 +282,13 @@
             if (body->len == sizeof(uint32_t)) {
                 uint32_t status = body->data[0] | (((uint32_t)body->data[1]) << 8) |
                 (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
-                uint8_t bat_io_sta = status & 0x00000003;
+                uint8_t bat_io_sta = status & 0x00000007; // Bit0 ~ 2
                 switch (bat_io_sta)
                 {
                     case 0: self.battery.state = [NSString stringWithFormat:@"Standby"]; break;
                     case 1: self.battery.state = [NSString stringWithFormat:@"Charging"]; break;
                     case 2: self.battery.state = [NSString stringWithFormat:@"Discharging"]; break;
+                    case 3: self.battery.state = [NSString stringWithFormat:@"Charge complete"]; break;
                 }
                 [self.delegate smartDevice:self dataUpdate:@{@"Battery status" : self.battery.state}];
             }
