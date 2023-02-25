@@ -10,6 +10,7 @@
 #import "SmartProtocol.h"
 #import "SmartDeviceVC.h"
 #import "DeviceTableViewCell.h"
+#import "Masonry.h"
 
 @interface SelectDevice () <UITableViewDelegate, UITableViewDataSource, CBCentralManagerDelegate, SmartDeviceDelegate>
 {
@@ -44,21 +45,21 @@
     
 //    NSLog(@"productInfo: %@", self.productInfo);
     
+    self.smartDevice = [NSMutableArray array];
+    
     // 初始化cell的圆角半径
     cornerRadius = 8.f;
     // 配置 TableView
     self.table = [self.view viewWithTag:1];  // 根据 TAG ID 获取到主页面的 TableView 控件
-    [self.table registerNib:[UINib nibWithNibName:@"DeviceTableViewCell" bundle:nil] forCellReuseIdentifier:@"DeviceTableViewCell"];
     self.table.delegate = self;              // 设置代理
     self.table.dataSource = self;            // 设置数据源
-    self.table.rowHeight = 100;              // 设置每行高度
-//    self.table.estimatedRowHeight = 128;     // 预估高度
-//    self.table.rowHeight = UITableViewAutomaticDimension; // 自动计算高度
+    self.table.estimatedRowHeight = 100;     // 预估高度
+    self.table.rowHeight = UITableViewAutomaticDimension; // 自动计算高度
     self.table.backgroundColor = [UIColor clearColor];
     self.table.separatorStyle = UITableViewCellSeparatorStyleNone; // 每行之间无分割线
     
     // 配置TableView占位符
-    self.placeholder = [[UILabel alloc]initWithFrame:CGRectMake(20, self.table.frame.size.height / 2 - 60, self.table.frame.size.width - 40, 60)];
+    self.placeholder = [[UILabel alloc]init];
     self.placeholder.text = @"No device found";
     self.placeholder.numberOfLines = 3;
     self.placeholder.font = [UIFont  boldSystemFontOfSize:30.0];
@@ -66,12 +67,15 @@
     self.placeholder.textAlignment = NSTextAlignmentCenter;
     [self.table addSubview:self.placeholder];
     
-    self.smartDevice = [NSMutableArray array];
+    [self.placeholder mas_makeConstraints:^(MASConstraintMaker *make){
+        make.centerX.equalTo(self.view.mas_centerX);
+        make.centerY.equalTo(self.view.mas_centerY);
+    }];
     
     // 配置下拉刷新的控件
     UIRefreshControl *RefreshControl = [[UIRefreshControl alloc]init];
     RefreshControl.backgroundColor = [UIColor clearColor];
-    RefreshControl.attributedTitle = [[NSAttributedString alloc]initWithString:@"下拉刷新"];
+    RefreshControl.attributedTitle = [[NSAttributedString alloc]initWithString:@"Pull to refresh"];
     [RefreshControl addTarget:self action:@selector(DownPullUpdate:) forControlEvents:UIControlEventValueChanged];
     self.table.refreshControl = RefreshControl;
     
@@ -207,6 +211,10 @@
         case SmartDeviceProductTypeBattery: // 电池包设备
         {
             DeviceTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"DeviceTableViewCell"]; // 通过队列ID出列Cell
+            if (cell == nil) {
+                cell = [[DeviceTableViewCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"DeviceTableViewCell"];
+            }
+            
             SmartBattery *battery = [self.smartDevice objectAtIndex:indexPath.section].battery;
             
             uint8_t *dev_id = baseInfo.manufacture_data->device_id;
@@ -389,8 +397,6 @@
     SmartDevice *smartDevice = [[SmartDevice alloc]init]; // 创建智能设备
     smartDevice.baseInfo = baseInfo; // 复制设备基本信息
     [self.smartDevice addObject:smartDevice]; // 添加该设备到数组
-//    NSIndexPath *newIndexPath = [NSIndexPath indexPathForRow:[self.smartDevice indexOfObject:smartDevice] inSection:0];
-//    [self.table insertRowsAtIndexPaths:[NSArray arrayWithObject:newIndexPath] withRowAnimation:UITableViewRowAnimationLeft];//插入Cell
     [self.table insertSections:[NSIndexSet indexSetWithIndex:[self.smartDevice indexOfObject:smartDevice]] withRowAnimation:UITableViewRowAnimationLeft];
 }
 

@@ -7,17 +7,133 @@
 
 #import "SmartDevice.h"
 #import "DeviceTableViewCell.h"
-
-//@interface DeviceTableViewCell()
-//
-//@end
+#import "Masonry.h"
 
 @implementation DeviceTableViewCell
 
-+ (instancetype)xibTableViewCell {
-    //在类方法中加载xib文件,注意:loadNibNamed:owner:options:这个方法返回的是NSArray,所以在后面加上firstObject或者lastObject或者[0]都可以；因为我们的XIB文件中，只有一个Cell
-    return [[[NSBundle mainBundle] loadNibNamed:@"DeviceTableViewCell" owner:nil options:nil] lastObject];
- }
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        self.deviceImage = [[UIImageView alloc]init];
+        self.deviceImage.contentMode = UIViewContentModeScaleAspectFit;
+        self.deviceImage.image = [UIImage imageNamed:@"电池包1"];
+        [self.contentView addSubview:self.deviceImage];
+        
+        self.deviceName = [[UILabel alloc]init];
+        self.deviceName.font = [UIFont boldSystemFontOfSize:17];
+        [self.contentView addSubview:self.deviceName];
+        
+        self.bleImage = [[UIImageView alloc]init];
+        self.bleImage.image = [UIImage imageNamed:@"蓝牙已断开"];
+        [self.contentView addSubview:self.bleImage];
+        
+        self.statusIcon = [[UIImageView alloc]init];
+        self.statusIcon.image = [UIImage imageNamed:@"待机中"];
+        [self.contentView addSubview:self.statusIcon];
+        
+        self.statusDescribe = [[UILabel alloc]init];
+        self.statusDescribe.font = [UIFont systemFontOfSize:16];
+        self.statusDescribe.text = @"Standby";
+        [self.contentView addSubview:self.statusDescribe];
+        
+        self.tempIcon = [[UIImageView alloc]init];
+        self.tempIcon.image = [UIImage imageNamed:@"温度"];
+        [self.contentView addSubview:self.tempIcon];
+        
+        self.tempValue = [[UILabel alloc]init];
+        self.tempValue.font = [UIFont systemFontOfSize:16];
+        self.tempValue.text = @"25°C";
+        [self.contentView addSubview:self.tempValue];
+        
+        self.percentIcon = [[UIImageView alloc]init];
+        self.percentIcon.image = [UIImage imageNamed:@"电量"];
+        [self.contentView addSubview:self.percentIcon];
+        
+        self.percentValue = [[UILabel alloc]init];
+        self.percentValue.font = [UIFont systemFontOfSize:16];
+        self.percentValue.text = @"80%";
+        [self.contentView addSubview:self.percentValue];
+        
+        self.connectBtn = [[UIButton alloc]init];
+        [self.connectBtn setTitle:@"Connect device" forState:UIControlStateNormal];
+        [self.connectBtn setTitleColor:[UIColor colorWithHexString:@"FF9040"] forState:UIControlStateNormal];
+        [self.contentView addSubview:self.connectBtn];
+        
+        // 约束所有子控件
+        CGFloat devImageSize = 90.0; // 设置设备图片高度以及宽度
+        CGFloat crosswiseCornerInterval = self.contentView.frame.size.width * 0.03; // 横向边角间隔
+        CGFloat lengthwaysCornerInterval = devImageSize * 0.05; // 纵向边角间隔(Cell高度跟着图片高度决定)
+        CGFloat imageAndInfoInterval = self.contentView.frame.size.width * 0.05; // 设备图片与信息的间隔
+        
+        // 设置设备图片约束
+        [self.deviceImage mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.top.equalTo(self.contentView.mas_top);
+            make.left.equalTo(self.contentView.mas_left).offset(crosswiseCornerInterval);
+            make.bottom.equalTo(self.contentView.mas_bottom);
+            make.size.mas_equalTo(CGSizeMake(devImageSize, devImageSize));
+        }];
+
+        // 设置设备名约束
+        [self.deviceName mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.top.equalTo(self.deviceImage.mas_top).offset(lengthwaysCornerInterval);
+            make.left.equalTo(self.deviceImage.mas_right).offset(imageAndInfoInterval);
+        }];
+        
+        // 设置蓝牙图标约束
+        [self.bleImage mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.top.equalTo(self.deviceName.mas_top);
+            make.right.equalTo(self.contentView.mas_right).offset(-crosswiseCornerInterval);
+            make.size.mas_equalTo(CGSizeMake(20, 20));
+        }];
+        
+        // 设置设备状态图标约束
+        [self.statusIcon mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.top.equalTo(self.contentView.mas_centerY).offset(-10);
+            make.left.equalTo(self.deviceName.mas_left);
+            make.size.mas_equalTo(CGSizeMake(20, 20));
+        }];
+        
+        // 设置设备状态描述约束
+        [self.statusDescribe mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.top.equalTo(self.statusIcon.mas_top);
+            make.left.equalTo(self.statusIcon.mas_right);
+        }];
+        
+        // 设置温度图标约束
+        [self.tempIcon mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.bottom.equalTo(self.deviceImage.mas_bottom).offset(-lengthwaysCornerInterval);
+            make.left.equalTo(self.statusIcon.mas_left);
+            make.size.mas_equalTo(CGSizeMake(20, 20));
+        }];
+        
+        // 设置温度值约束
+        [self.tempValue mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.bottom.equalTo(self.tempIcon.mas_bottom);
+            make.left.equalTo(self.tempIcon.mas_right);
+        }];
+        
+        // 设置电量图标约束
+        [self.percentIcon mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.bottom.equalTo(self.tempValue.mas_bottom);
+            make.left.equalTo(self.tempIcon.mas_right).offset(self.contentView.frame.size.width / 3.0);
+            make.size.mas_equalTo(CGSizeMake(20, 20));
+        }];
+        
+        // 设置电量值约束
+        [self.percentValue mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.bottom.equalTo(self.percentIcon.mas_bottom);
+            make.left.equalTo(self.percentIcon.mas_right).offset(5);
+        }];
+        
+        // 设置按钮约束
+        [self.connectBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.bottom.equalTo(self.contentView.mas_bottom).offset(-lengthwaysCornerInterval);
+            make.right.equalTo(self.contentView.mas_right).offset(-crosswiseCornerInterval);
+            make.size.mas_equalTo(CGSizeMake(self.contentView.frame.size.width / 2.0, devImageSize / 2.9));
+        }];
+    }
+    return self;
+}
 
 - (void)setDeviceName:(NSString *)name state:(SmartDeviceState)state info:(SmartBattery *)battery {
     
@@ -31,6 +147,7 @@
             return ;
         }
         
+        [self.connectBtn setTitle:@"" forState:UIControlStateNormal];
         self.connectBtn.hidden = true;
         self.tempIcon.hidden = self.percentIcon.hidden = self.statusIcon.hidden = false;
         self.bleImage.image = [UIImage imageNamed:@"蓝牙已连接"];
@@ -76,54 +193,6 @@
         self.connectBtn.layer.borderColor = [UIColor colorWithHexString:@"FF9040"].CGColor;
         self.connectBtn.backgroundColor = [UIColor colorWithHexString:@"FF9040" alpha:0.1];
     }
-}
-
-// 重新布局视图控件
--(void)layoutSubviews {
-
-    CGFloat x, y, width;
-    CGFloat crosswiseCornerInterval = self.contentView.frame.size.width * 0.01; // 横向边角间隔
-    CGFloat lengthwaysCornerInterval = self.contentView.frame.size.height * 0.05; // 纵向边角间隔
-    CGFloat imageAndInfoInterval = self.contentView.frame.size.width * 0.05; // 设备图片与信息的间隔
-    CGFloat infoX = self.deviceImage.frame.origin.x + self.deviceImage.frame.size.width + imageAndInfoInterval;; // 信息的x坐标
-    
-    // 设置设备名布局位置
-    width = self.contentView.frame.size.width - infoX - self.bleImage.frame.size.width - crosswiseCornerInterval;
-    self.deviceName.frame = CGRectMake(infoX, lengthwaysCornerInterval, width, self.deviceName.frame.size.height);
-    
-    // 设置蓝牙图标位置
-    x = self.deviceName.frame.origin.x + self.deviceName.frame.size.width;
-    self.bleImage.frame = CGRectMake(x, lengthwaysCornerInterval, self.bleImage.frame.size.width, self.bleImage.frame.size.height);
-    
-    // 设置状态图标位置
-    y = self.contentView.frame.size.height / 2 - self.statusIcon.frame.size.height / 2;
-    self.statusIcon.frame = CGRectMake(infoX, y, self.statusIcon.frame.size.width, self.statusIcon.frame.size.height);
-    
-    // 设置状态描述位置
-    x = self.statusIcon.frame.origin.x + self.statusIcon.frame.size.width;
-    self.statusDescribe.frame = CGRectMake(x, y, self.statusDescribe.frame.size.width, self.statusDescribe.frame.size.height);
-    
-    // 设置温度图标位置
-    y = self.contentView.frame.size.height - self.tempIcon.frame.size.height;
-    y -= self.contentView.frame.size.height * 0.1; // 温度以及电量的边角间隔
-    self.tempIcon.frame = CGRectMake(infoX, y, self.tempIcon.frame.size.width, self.tempIcon.frame.size.height);
-    
-    // 设置温度值显示位置
-    x = infoX + self.tempIcon.frame.size.width;
-    self.tempValue.frame = CGRectMake(x, y, self.tempValue.frame.size.width, self.tempValue.frame.size.height);
-    
-    // 设置电量图标位置
-    x = x + (self.contentView.frame.size.width - infoX) * 0.4; // 温度与电量之间的间隔
-    self.percentIcon.frame = CGRectMake(x, y, self.percentIcon.frame.size.width, self.percentIcon.frame.size.height);
-    
-    // 设置电量值显示位置
-    x = x + self.percentIcon.frame.size.width;
-    self.percentValue.frame = CGRectMake(x, y, self.percentValue.frame.size.width, self.percentValue.frame.size.height);
-    
-    // 设置连接按钮位置
-    x = self.contentView.frame.size.width - self.connectBtn.frame.size.width - crosswiseCornerInterval;
-    y = self.contentView.frame.size.height - self.connectBtn.frame.size.height - lengthwaysCornerInterval;
-    self.connectBtn.frame = CGRectMake(x, y, self.connectBtn.frame.size.width, self.connectBtn.frame.size.height);
 }
 
 - (void)awakeFromNib {

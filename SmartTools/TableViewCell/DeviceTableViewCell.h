@@ -12,19 +12,18 @@
 
 @interface DeviceTableViewCell : UITableViewCell
 
-@property (nonatomic, weak) IBOutlet UILabel *deviceName;
-@property (nonatomic, weak) IBOutlet UILabel *statusDescribe;
-@property (nonatomic, weak) IBOutlet UILabel *tempValue;
-@property (nonatomic, weak) IBOutlet UILabel *percentValue;
-@property (nonatomic, weak) IBOutlet UIImageView *statusIcon;
-@property (weak, nonatomic) IBOutlet UIImageView *deviceImage;
-@property (nonatomic, weak) IBOutlet UIImageView *bleImage;
-@property (weak, nonatomic) IBOutlet UIImageView *tempIcon;
-@property (weak, nonatomic) IBOutlet UIButton *connectBtn;
-@property (weak, nonatomic) IBOutlet UIImageView *percentIcon;
+@property (nonatomic, strong) UILabel *deviceName;
+@property (nonatomic, strong) UILabel *statusDescribe;
+@property (nonatomic, strong) UILabel *tempValue;
+@property (nonatomic, strong) UILabel *percentValue;
+@property (nonatomic, strong) UIImageView *statusIcon;
+@property (nonatomic, strong) UIImageView *deviceImage;
+@property (nonatomic, strong) UIImageView *bleImage;
+@property (nonatomic, strong) UIImageView *tempIcon;
+@property (nonatomic, strong) UIButton *connectBtn;
+@property (nonatomic, strong) UIImageView *percentIcon;
 
-+(instancetype)xibTableViewCell;
-
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier;
 - (void)setDeviceName:(NSString *)name state:(SmartDeviceState)state info:(SmartBattery *)battery;
 
 @end
