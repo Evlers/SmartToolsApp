@@ -248,7 +248,7 @@
         case SP_CODE_BAT_TEMP:
             if (body->len == sizeof(int16_t)) {
                 int16_t bat_temp = body->data[0] | (((uint16_t)body->data[1]) << 8);
-                self.battery.temperature = [NSString stringWithFormat:@"%0.1f°C", (float)bat_temp / 10.0];
+                self.battery.temperature = [NSString stringWithFormat:@"%d°C", (int)((float)bat_temp / 10.0)];
                 [self.delegate smartDevice:self dataUpdate:@{@"Battery temperature" : self.battery.temperature}];
             }
             break;
