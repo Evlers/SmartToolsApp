@@ -92,8 +92,8 @@
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 500 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
             while (self.smartDevice.count) { // 删除所有搜索到的设备
                 NSIndexSet *indexSet = [NSIndexSet indexSetWithIndex:self.smartDevice.count - 1];
-                if ([self.smartDevice lastObject].baseInfo.peripheral.state == CBPeripheralStateConnected) {
-                    [self.centralManager cancelPeripheralConnection:[self.smartDevice lastObject].baseInfo.peripheral]; // 断开连接
+                if ([self.smartDevice lastObject].baseInfo.state != SmartDeviceBLEDisconnected) {
+                    [[self.smartDevice lastObject] disconnectToDevice];
                 }
                 [self.smartDevice removeObjectAtIndex:self.smartDevice.count-1]; // 删除一个设备
                 [self.table deleteSections:indexSet withRowAnimation:UITableViewRowAnimationRight];
@@ -120,10 +120,11 @@
     
     for (SmartDevice *smartDevice in self.smartDevice) {
         smartDevice.delegate = self; // 夺回设备的代理
-        if (smartDevice.baseInfo.peripheral.state == CBPeripheralStateConnected) { // 如果已连接的设备
+        if (smartDevice.baseInfo.state == SmartDeviceConnectSuccess) { // 如果已连接的设备
             [smartDevice getBattreyBaseInfo]; // 获取电池包基本信息(刷新卡片中的信息)
         }
     }
+    [self.table reloadData];
 }
 
 - (void)didReceiveMemoryWarning {
@@ -134,11 +135,10 @@
 // 连接按钮单击
 - (void)connectButtonClicked:(UIButton *)btn {
     
-    if ([self.smartDevice objectAtIndex:btn.tag].baseInfo.peripheral.state != CBPeripheralStateDisconnected) return;
+    if ([self.smartDevice objectAtIndex:btn.tag].baseInfo.state != SmartDeviceBLEDisconnected) return;
     
-    [btn setTitle:@"Connecting.." forState:UIControlStateNormal];
     [self.smartDevice objectAtIndex:btn.tag].delegate = self; // 代理智能设备接口
-    [[self.smartDevice objectAtIndex:btn.tag] connectToDeviceBLE:self.centralManager]; // 连接到设备蓝牙
+    [[self.smartDevice objectAtIndex:btn.tag] connectToDevice]; // 连接到设备
 }
 
 #pragma mark -- TableView 接口
@@ -239,8 +239,8 @@
     UIStoryboard *mainStory = [UIStoryboard storyboardWithName:@"Main" bundle:nil]; // 获取XIB文件
     self.device_view = [mainStory instantiateViewControllerWithIdentifier:@"DeviceView"]; // 获取试图控制器
     self.device_view.smartDevice = [self.smartDevice objectAtIndex:indexPath.section]; // 传递设备信息到设备窗口
-    if (smartDevice.baseInfo.peripheral.state != CBPeripheralStateConnected)
-        [smartDevice connectToDeviceBLE:self.centralManager]; // 连接到设备蓝牙
+    if (smartDevice.baseInfo.state == SmartDeviceBLEDisconnected)
+        [smartDevice connectToDevice]; // 连接到设备
     [self.navigationController pushViewController:self.device_view animated:YES]; // 跳转到设备窗口
 }
 
@@ -333,22 +333,13 @@
 // 智能设备状态已更新
 - (void)smartDevice:(SmartDevice *)device didUpdateState:(SmartDeviceState)state {
     [self smartDeviceInfoUpdate: device];
-    switch (state)
-    {
-        case SmartDeviceBLEServiceError:
-        case SmartDeviceBLECharacteristicError:
-        case SmartDeviceConnectTimeout:
-            [self.centralManager cancelPeripheralConnection:device.baseInfo.peripheral]; // 取消连接
-            break;
-        default: break;
-    }
 }
 
 #pragma mark -- BLE 接口
 
 // 控制器改变状态
 -(void)centralManagerDidUpdateState:(CBCentralManager *)central {
-    if(central.state == CBManagerStatePoweredOn){
+    if(central.state == CBManagerStatePoweredOn) {
         NSLog(@"BlueTooth is startup");
         [self.centralManager scanForPeripheralsWithServices:nil options:nil]; // 搜索周围所有蓝牙设备
         [self.indicatorView startAnimating]; // 开始旋转动画 提示正在扫描中
@@ -398,35 +389,6 @@
     smartDevice.baseInfo = baseInfo; // 复制设备基本信息
     [self.smartDevice addObject:smartDevice]; // 添加该设备到数组
     [self.table insertSections:[NSIndexSet indexSetWithIndex:[self.smartDevice indexOfObject:smartDevice]] withRowAnimation:UITableViewRowAnimationLeft];
-}
-
-// 已经连接设备
-- (void)centralManager:(CBCentralManager *)central didConnectPeripheral:(CBPeripheral *)peripheral {
-    
-    for (SmartDevice *smartDevice in self.smartDevice) {
-        if ([smartDevice.baseInfo.peripheral.identifier.UUIDString isEqualToString:peripheral.identifier.UUIDString]) {
-            [smartDevice BLEConnected]; // 已连接到设备蓝牙，开始连接设备协议
-        }
-    }
-    
-    NSLog(@"Connected to %@", peripheral.name);
-}
-
-// 连接失败
--(void)centralManager:(CBCentralManager *)central didFailToConnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
-    
-}
-
-// 断开连接
-- (void)centralManager:(CBCentralManager *)central didDisconnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
-    
-    for (SmartDevice *smartDevice in self.smartDevice) {
-        if ([smartDevice.baseInfo.peripheral.identifier.UUIDString isEqualToString:peripheral.identifier.UUIDString]) {
-            [self smartDeviceInfoUpdate: smartDevice];
-            [smartDevice BLEdisconnected];
-        }
-    }
-    NSLog(@"Disconnect is %@", peripheral.name);
 }
 
 @end

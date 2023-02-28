@@ -79,7 +79,7 @@
     if (self.smartDevice.baseInfo.peripheral.state == CBPeripheralStateConnected) // 如果已连接
         [self.smartDevice getDeviceAllData]; // 查询所有设备信息
     else { // 未连接，等待设备连接
-        self.alert = [UIAlertController alertControllerWithTitle:@"Cconnecting" message:@"Connect device.." preferredStyle:UIAlertControllerStyleAlert];
+        self.alert = [UIAlertController alertControllerWithTitle:@"Cconnecting" message:@"Connecting device.." preferredStyle:UIAlertControllerStyleAlert];
         [self presentViewController:self.alert animated:YES completion:nil]; // 显示提示窗口
     }
     
@@ -405,6 +405,7 @@
     
     switch (state)
     {
+        case SmartDeviceBLECononectFailed:
         case SmartDeviceBLEServiceError:
         case SmartDeviceBLECharacteristicError:
             [self.navigationController popToRootViewControllerAnimated:YES]; // 退出到主窗口
@@ -419,6 +420,10 @@
                 [self dismissViewControllerAnimated:YES completion:nil]; // 退出提示框
             }
             [self.navigationController popToRootViewControllerAnimated:YES]; // 退出到主窗口
+            break;
+            
+        case SmartDeviceBLEConnecting:
+            self.alert.message = @"Connecting device..";
             break;
             
         case SmartDeviceBLEConnected:

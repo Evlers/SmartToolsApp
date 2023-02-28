@@ -36,7 +36,7 @@
 @end
 
 
-@interface SmartDevice () <CBPeripheralDelegate, SmartProtocolDelegate>
+@interface SmartDevice () <CBCentralManagerDelegate, CBPeripheralDelegate, SmartProtocolDelegate>
 
 @property (nonatomic, strong) dispatch_block_t  conTimeoutBlock;    // 设备连接超时执行块
 @property (nonatomic, strong) NSString          *service_uuid;      // 服务 UUID
@@ -46,6 +46,7 @@
 @property (nonatomic, strong) NSMutableArray    *send_queue;        // BLE数据发送队列
 @property (nonatomic, strong) SmartProtocol     *smart_protocol;    // 智能包协议
 @property (nonatomic, strong) FirmwareUpgrade   *firmwareUpgrade;   // 固件更新
+@property (nonatomic, strong) CBCentralManager  *centralManager;    // 中心管理器
 
 @end
 
@@ -60,47 +61,27 @@
     return self;
 }
 
-// 连接到设备蓝牙
-- (void)connectToDeviceBLE:(CBCentralManager *)centralManager {
-    [centralManager connectPeripheral:self.baseInfo.peripheral options:nil]; // 连接设备蓝牙
+// 连接到设备
+- (void)connectToDevice {
+    
+    [self updateDeviceState:SmartDeviceBLEConnecting];
+    self.centralManager = [[CBCentralManager alloc]initWithDelegate:self queue:dispatch_get_main_queue()]; // 创建中心管理者
+    
     // 创建超时任务，在指定时间内需要完成设备的握手连接
     self.conTimeoutBlock = dispatch_block_create(DISPATCH_BLOCK_BARRIER , ^{ // 创建超时连接的定时任务块
-        self.baseInfo.state = SmartDeviceConnectTimeout;
-        if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
-            [self.delegate smartDevice:self didUpdateState:SmartDeviceConnectTimeout];
+        [self updateDeviceState:SmartDeviceConnectTimeout];
+        [self.centralManager cancelPeripheralConnection:self.baseInfo.peripheral]; // 取消连接
     });
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 10 * NSEC_PER_SEC), dispatch_get_main_queue(), self.conTimeoutBlock); // 10秒后进入超时处理
 }
 
-//  已连接到设备蓝牙
-- (void)BLEConnected {
+// 断开与设备连接
+- (void)disconnectToDevice {
     
-    self.baseInfo.state = SmartDeviceBLEConnected;
-    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
-        [self.delegate smartDevice:self didUpdateState:SmartDeviceBLEConnected]; // 蓝牙已连接
-    
-    if (self.baseInfo.manufacture_data->uuid_flag == 0x5A) { // 使用自定义UUID
-        self.service_uuid = [NSString stringWithFormat:@"%04X", self.baseInfo.manufacture_data->server_uiud];
-        self.upload_uuid = [NSString stringWithFormat:@"%04X", self.baseInfo.manufacture_data->upload_uuid];
-        self.download_uuid = [NSString stringWithFormat:@"%04X", self.baseInfo.manufacture_data->download_uuid];
-    } else { // 使用默认的UUID
-        self.service_uuid = DEFAULT_SERVIICE_UUID;
-        self.upload_uuid = DEFAULT_UPLOAD_UUID;
-        self.download_uuid = DEFAULT_DOWNLOAD_UUID;
+    if (self.baseInfo.peripheral.state == CBPeripheralStateConnected) {
+        dispatch_block_cancel(self.conTimeoutBlock); // 取消超时任务
+        [self.centralManager cancelPeripheralConnection:self.baseInfo.peripheral]; // 取消设备连接
     }
-    
-    self.baseInfo.peripheral.delegate = self; // 设置代理
-    [self.baseInfo.peripheral discoverServices:nil]; // 扫描服务
-}
-
-// 已断开设备蓝牙连接
-- (void)BLEdisconnected {
-    
-    self.baseInfo.state = SmartDeviceConnectTimeout;
-    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
-        [self.delegate smartDevice:self didUpdateState:SmartDeviceBLEDisconnected]; // 已断开蓝牙连接
-    
-    dispatch_block_cancel(self.conTimeoutBlock); // 取消超时任务
 }
 
 // 开始固件更新
@@ -168,6 +149,13 @@
     [self.smart_protocol send_get_command:SP_CODE_CURRENT_PER];         // 发送当前电量查询指令
 }
 
+// 更新设备状态
+- (void)updateDeviceState:(SmartDeviceState)state {
+    self.baseInfo.state = state;
+    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
+        [self.delegate smartDevice:self didUpdateState:self.baseInfo.state];
+}
+
 #pragma mark -- Smart battery package protocool interface
 
 // 设备应答处理
@@ -211,12 +199,8 @@
     {
         case SP_CODE_CONNECT: // 握手连接
             dispatch_block_cancel(self.conTimeoutBlock); // 取消超时任务
-            
-            self.baseInfo.state = SmartDeviceConnectSuccess;
             [self.delegate smartDevice:self dataUpdate:@{@"Handshake connection": self.baseInfo}];
-            if ([self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
-                [self.delegate smartDevice:self didUpdateState:SmartDeviceConnectSuccess];
-            
+            [self updateDeviceState:SmartDeviceConnectSuccess];
             [self getDeviceAllData];// 查询设备所有参数
             break;
             
@@ -549,6 +533,57 @@
 
 #pragma mark -- BLE 接口
 
+// 控制器改变状态
+-(void)centralManagerDidUpdateState:(CBCentralManager *)central {
+    if(central.state == CBManagerStatePoweredOn) {
+        [self.centralManager scanForPeripheralsWithServices:nil options:nil]; // 扫描周围所有的设备 并执行设备蓝牙的连接
+    }
+}
+
+// 搜索到设备
+-(void)centralManager:(CBCentralManager *)central didDiscoverPeripheral:(CBPeripheral *)peripheral advertisementData:(NSDictionary<NSString *,id> *)advertisementData RSSI:(NSNumber *)RSSI {
+    if ([peripheral.identifier isEqual:self.baseInfo.peripheral.identifier]) {
+        [self.centralManager stopScan]; // 停止扫描
+        self.baseInfo.peripheral = peripheral; // 保存需要连接的BLE外围设备
+        [self.centralManager connectPeripheral:peripheral options:nil]; // 连接设备蓝牙
+    }
+}
+
+// 已经连接设备
+- (void)centralManager:(CBCentralManager *)central didConnectPeripheral:(CBPeripheral *)peripheral {
+    
+    [self updateDeviceState:SmartDeviceBLEConnected];
+    
+    if (self.baseInfo.manufacture_data->uuid_flag == 0x5A) { // 使用自定义UUID
+        self.service_uuid = [NSString stringWithFormat:@"%04X", self.baseInfo.manufacture_data->server_uiud];
+        self.upload_uuid = [NSString stringWithFormat:@"%04X", self.baseInfo.manufacture_data->upload_uuid];
+        self.download_uuid = [NSString stringWithFormat:@"%04X", self.baseInfo.manufacture_data->download_uuid];
+    } else { // 使用默认的UUID
+        self.service_uuid = DEFAULT_SERVIICE_UUID;
+        self.upload_uuid = DEFAULT_UPLOAD_UUID;
+        self.download_uuid = DEFAULT_DOWNLOAD_UUID;
+    }
+    
+    self.baseInfo.peripheral.delegate = self; // 设置代理
+    [self.baseInfo.peripheral discoverServices:nil]; // 扫描服务
+    NSLog(@"Connect to %@", self.baseInfo.product_info.default_name);
+}
+
+// 连接失败
+-(void)centralManager:(CBCentralManager *)central didFailToConnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
+    
+    [self.centralManager cancelPeripheralConnection:self.baseInfo.peripheral]; // 取消连接
+    [self updateDeviceState:SmartDeviceBLECononectFailed];
+}
+
+// 断开连接
+- (void)centralManager:(CBCentralManager *)central didDisconnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
+    
+    dispatch_block_cancel(self.conTimeoutBlock); // 取消超时任务
+    [self updateDeviceState:SmartDeviceBLEDisconnected];
+    NSLog(@"Disconnect to %@", self.baseInfo.product_info.default_name);
+}
+
 // 已经发现服务
 - (void)peripheral:(CBPeripheral *)peripheral didDiscoverServices:(NSError *)error {
     
@@ -562,9 +597,8 @@
     }
     
     NSLog(@"No service is found");
-    self.baseInfo.state = SmartDeviceBLEServiceError;
-    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
-        [self.delegate smartDevice:self didUpdateState:SmartDeviceBLEServiceError];
+    [self updateDeviceState:SmartDeviceBLEServiceError];
+    [self.centralManager cancelPeripheralConnection:self.baseInfo.peripheral]; // 取消连接
 }
 
 // 发现特征
@@ -593,14 +627,11 @@
     
     if (self.write_char == nil || discover_upload_uuid == false) {// 如果没发现写入特征或者上报特征
         NSLog(@"No write feature or report feature is found");
-        self.baseInfo.state = SmartDeviceBLECharacteristicError;
-        if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
-            [self.delegate smartDevice:self didUpdateState:SmartDeviceBLECharacteristicError];
+        [self updateDeviceState:SmartDeviceBLECharacteristicError];
+        [self.centralManager cancelPeripheralConnection:self.baseInfo.peripheral]; // 取消连接
         
     } else {
-        self.baseInfo.state = SmartDeviceBLEDiscoverCharacteristic;
-        if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
-            [self.delegate smartDevice:self didUpdateState:SmartDeviceBLEDiscoverCharacteristic];
+        [self updateDeviceState:SmartDeviceBLEDiscoverCharacteristic];
     }
 }
 
@@ -624,9 +655,7 @@
 // 已经更新通知状态
 - (void)peripheral:(CBPeripheral *)peripheral didUpdateNotificationStateForCharacteristic:(CBCharacteristic *)characteristic error:(nullable NSError *)error {
     NSLog(@"Did enable the notification state in the characteristic %@", characteristic.UUID.UUIDString);
-    self.baseInfo.state = SmartDeviceBLENotifyEnable;
-    if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
-        [self.delegate smartDevice:self didUpdateState:SmartDeviceBLENotifyEnable];
+    [self updateDeviceState:SmartDeviceBLENotifyEnable];
     NSLog(@"BLE Device maximum write value length: %ld", [self.baseInfo.peripheral maximumWriteValueLengthForType:CBCharacteristicWriteWithoutResponse]);
     
     NSData *aes_key_tail = [NSData dataWithBytes:self.baseInfo.manufacture_data->aes_key_tail length:8];

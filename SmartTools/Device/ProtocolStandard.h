@@ -8,6 +8,14 @@
 #ifndef ProtocolStandard_h
 #define ProtocolStandard_h
 
+#define FCB_RAND_BIT                        0x01        // 随机数异或控制位
+#define FCB_AES_BIT                         0x02        // AES 加密控制位  0-不启用 AES(ECB)  1-启用 AES(ECB)加密
+#define FCB_MASK_BIT                        0x03        // FCB 掩码
+#define FCB_DEFAULT                         0x01        // 默认 FCB
+#define BODY_REPLY_BIT                      0x80        // Body 应答位
+#define FRAME_HEAD_LEN                      3           // frame 头长度
+#define BODY_HEAD_LEN                       5           // Body 头长度
+
 #pragma pack(push)
 #pragma pack(1)     // 字节对齐
 

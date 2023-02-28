@@ -13,13 +13,15 @@ typedef NS_ENUM(NSInteger, SmartDeviceProductType) {
 };
 
 typedef NS_ENUM(NSInteger, SmartDeviceState) {
-    SmartDeviceBLEServiceError = 0,
+    SmartDeviceBLEDisconnected = 0,
+    SmartDeviceBLEConnecting,
+    SmartDeviceBLECononectFailed,
+    SmartDeviceBLEServiceError,
     SmartDeviceBLECharacteristicError,
     SmartDeviceBLEDiscoverServer,
     SmartDeviceBLEDiscoverCharacteristic,
     SmartDeviceBLENotifyEnable,
     SmartDeviceBLEConnected,
-    SmartDeviceBLEDisconnected,
     SmartDeviceConnectTimeout,
     SmartDeviceConnectSuccess,
 };

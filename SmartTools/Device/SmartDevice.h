@@ -60,14 +60,11 @@
 
 - (SmartDevice *)init;
 
-// 连接到设备蓝牙
-- (void)connectToDeviceBLE:(CBCentralManager *)centralManager;
+// 连接到设备
+- (void)connectToDevice;
 
-// 已连接到设备蓝牙(中心管理器代理中调用)
-- (void)BLEConnected;
-
-// 已断开设备蓝牙(中心管理器代理中调用)
-- (void)BLEdisconnected;
+// 断开与设备的连接
+- (void)disconnectToDevice;
 
 // 查询设备所有数据
 - (void)getDeviceAllData;

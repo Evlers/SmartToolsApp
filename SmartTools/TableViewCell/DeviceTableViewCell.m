@@ -178,7 +178,9 @@
         self.tempValue.text = self.percentValue.text = self.statusDescribe.text = @"";
         self.tempIcon.hidden = self.percentIcon.hidden = self.statusIcon.hidden = true;
         self.bleImage.image = [UIImage imageNamed:@"蓝牙已断开"];
-        if (state == SmartDeviceBLEConnected)
+        if (state == SmartDeviceBLEConnecting)
+            [self.connectBtn setTitle:@"Connecting device.." forState:UIControlStateNormal];
+        else if (state == SmartDeviceBLEConnected)
             [self.connectBtn setTitle:@"Discover srervices.." forState:UIControlStateNormal];
         else if (state == SmartDeviceBLEDiscoverServer)
             [self.connectBtn setTitle:@"Discover characteristics.." forState:UIControlStateNormal];
