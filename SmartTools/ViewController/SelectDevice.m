@@ -67,7 +67,7 @@
     self.placeholder.textAlignment = NSTextAlignmentCenter;
     [self.table addSubview:self.placeholder];
     
-    [self.placeholder mas_makeConstraints:^(MASConstraintMaker *make){
+    [self.placeholder mas_makeConstraints:^(MASConstraintMaker *make) {
         make.centerX.equalTo(self.view.mas_centerX);
         make.centerY.equalTo(self.view.mas_centerY);
     }];
@@ -105,7 +105,7 @@
                 
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1000 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{ // 1秒后如果没搜索到设备则显示占位符
                     if (self.smartDevice.count == 0)
-                        [self.table addSubview:self.placeholder];
+                        self.placeholder.hidden = false; // 显示占位符
                 });
             });
         });
@@ -154,7 +154,7 @@
 // 返回组数量
 -(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
     if (self.smartDevice.count) {
-        [self.placeholder removeFromSuperview]; // 移除占位符
+        self.placeholder.hidden = true; // 隐藏占位符
     }
     return self.smartDevice.count;
 }
