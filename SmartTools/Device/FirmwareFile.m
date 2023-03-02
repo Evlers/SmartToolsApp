@@ -29,7 +29,6 @@
     
     for (FileInfo *info in allFile) { // 遍历文件
         if ([info.path hasSuffix:@".zip"]) { // zip文件
-            NSLog(@"Start loading the %@ file", info.name);
             Firmware *firmware = [[Firmware alloc]initWithLoadFirmware:info.path]; // 装载升级文件
             
             if (firmware == nil) continue;
@@ -132,15 +131,13 @@
     if (manifest[@"bootloader"]) {
         if ((file = [self loadBinFile:manifest firmware:@"bootloader" fileFolder:upgradeFileFolder]) != nil)
             [self.bin_file addObject:file];
-    } else
-        NSLog(@"The bootloader object does not exist");
+    }
     
     if (manifest[@"application"]) {
         FirmwareFile *file;
         if ((file = [self loadBinFile:manifest firmware:@"application" fileFolder:upgradeFileFolder]) != nil)
             [self.bin_file addObject:file];
-    } else
-        NSLog(@"The application object does not exist");
+    }
     
     if (self.bin_file.count == 0) { // 如果未能找到一个固件
         return nil; // 错误

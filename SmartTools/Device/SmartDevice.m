@@ -78,10 +78,8 @@
 // 断开与设备连接
 - (void)disconnectToDevice {
     
-    if (self.baseInfo.peripheral.state == CBPeripheralStateConnected) {
-        dispatch_block_cancel(self.conTimeoutBlock); // 取消超时任务
-        [self.centralManager cancelPeripheralConnection:self.baseInfo.peripheral]; // 取消设备连接
-    }
+    dispatch_block_cancel(self.conTimeoutBlock); // 取消超时任务
+    [self.centralManager cancelPeripheralConnection:self.baseInfo.peripheral]; // 取消设备连接
 }
 
 // 开始固件更新

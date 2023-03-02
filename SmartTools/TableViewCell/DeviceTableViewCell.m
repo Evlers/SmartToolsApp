@@ -9,6 +9,8 @@
 #import "DeviceTableViewCell.h"
 #import "Masonry.h"
 
+#define DEVICE_IMG_SIZE         100.0
+
 @implementation DeviceTableViewCell
 
 - (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
@@ -60,7 +62,7 @@
         [self.contentView addSubview:self.connectBtn];
         
         // 约束所有子控件
-        CGFloat devImageSize = 90.0; // 设置设备图片高度以及宽度
+        CGFloat devImageSize = DEVICE_IMG_SIZE; // 设置设备图片高度以及宽度
         CGFloat crosswiseCornerInterval = self.contentView.frame.size.width * 0.03; // 横向边角间隔
         CGFloat lengthwaysCornerInterval = devImageSize * 0.05; // 纵向边角间隔(Cell高度跟着图片高度决定)
         CGFloat imageAndInfoInterval = self.contentView.frame.size.width * 0.05; // 设备图片与信息的间隔
@@ -197,9 +199,20 @@
     }
 }
 
+// 设置Cell的左右间隔
+- (void)setFrame:(CGRect)frame {
+    
+    NSInteger cornerInterval = self.frame.size.width * 0.05;
+    frame.size.width -= cornerInterval * 2;
+    frame.origin.x += cornerInterval;
+    frame.size.height = DEVICE_IMG_SIZE;
+//    self.layer.masksToBounds = YES;
+//    self.layer.cornerRadius = 10;
+    [super setFrame:frame];
+}
+
 - (void)awakeFromNib {
     [super awakeFromNib];
-    
 }
 
 -(void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated {
@@ -213,3 +226,38 @@
 
 @end
 
+
+@implementation DevParamUITableViewCell
+
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        
+    }
+    return self;
+}
+
+// 设置Cell的左右间隔
+- (void)setFrame:(CGRect)frame {
+    
+    NSInteger cornerInterval = self.frame.size.width * 0.05;
+    frame.size.width -= cornerInterval * 2;
+    frame.origin.x += cornerInterval;
+    frame.size.height = 44;
+    [super setFrame:frame];
+}
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+}
+
+-(void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated {
+    // 不执行高亮动作
+//    [super setHighlighted:highlighted animated:animated];
+}
+
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
+//    [super setSelected:selected animated:animated];
+}
+
+@end

@@ -34,6 +34,7 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view.
+    self.title = @"Home page";
     self.view.backgroundColor = [UIColor colorWithWhite:0.95 alpha:1];
     
     // 初始化产品信息
@@ -50,13 +51,16 @@
     // 初始化cell的圆角半径
     cornerRadius = 8.f;
     // 配置 TableView
-    self.table = [self.view viewWithTag:1];  // 根据 TAG ID 获取到主页面的 TableView 控件
+    self.table = [[UITableView alloc]init];
     self.table.delegate = self;              // 设置代理
     self.table.dataSource = self;            // 设置数据源
-    self.table.estimatedRowHeight = 100;     // 预估高度
-    self.table.rowHeight = UITableViewAutomaticDimension; // 自动计算高度
+    self.table.estimatedRowHeight = UITableViewAutomaticDimension;
     self.table.backgroundColor = [UIColor clearColor];
     self.table.separatorStyle = UITableViewCellSeparatorStyleNone; // 每行之间无分割线
+    [self.view addSubview:self.table];
+    [self.table mas_makeConstraints:^(MASConstraintMaker * make) {
+        make.edges.equalTo(self.view);
+    }];
     
     // 配置TableView占位符
     self.placeholder = [[UILabel alloc]init];
@@ -80,9 +84,6 @@
     self.table.refreshControl = RefreshControl;
     
     self.centralManager = [[CBCentralManager alloc]initWithDelegate:self queue:dispatch_get_main_queue()]; // 创建中心管理者
-    
-    UIStoryboard *mainStory = [UIStoryboard storyboardWithName:@"Main" bundle:nil]; // 获取XIB文件
-    self.device_view = [mainStory instantiateViewControllerWithIdentifier:@"DeviceView"]; // 获取试图控制器
 }
 
 // 下拉更新回调
@@ -92,7 +93,8 @@
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 500 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
             while (self.smartDevice.count) { // 删除所有搜索到的设备
                 NSIndexSet *indexSet = [NSIndexSet indexSetWithIndex:self.smartDevice.count - 1];
-                if ([self.smartDevice lastObject].baseInfo.state != SmartDeviceBLEDisconnected) {
+                if ([self.smartDevice lastObject].baseInfo.peripheral.state != CBPeripheralStateDisconnected) {
+                    [self.smartDevice lastObject].delegate = nil;
                     [[self.smartDevice lastObject] disconnectToDevice];
                 }
                 [self.smartDevice removeObjectAtIndex:self.smartDevice.count-1]; // 删除一个设备
@@ -148,7 +150,7 @@
 //    return @"Nearby equipment";
     if (section == 0)
         return @"My device";
-    return nil;
+    return @" ";
 }
 
 // 返回组数量
@@ -161,13 +163,7 @@
 
 // 组头高度
 -(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
-    if (section == 0)
-        return 60.0;
-    return 10.0;
-}
-
--(CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section {
-//    if (section >= self.smartDevice.count) return 0;
+    if (section == 0) return 60;
     return 1;
 }
 
@@ -236,8 +232,7 @@
 -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     
     SmartDevice *smartDevice = [self.smartDevice objectAtIndex:indexPath.section];
-    UIStoryboard *mainStory = [UIStoryboard storyboardWithName:@"Main" bundle:nil]; // 获取XIB文件
-    self.device_view = [mainStory instantiateViewControllerWithIdentifier:@"DeviceView"]; // 获取试图控制器
+    self.device_view = [[SmartDeviceVC alloc]init];
     self.device_view.smartDevice = [self.smartDevice objectAtIndex:indexPath.section]; // 传递设备信息到设备窗口
     if (smartDevice.baseInfo.state == SmartDeviceBLEDisconnected)
         [smartDevice connectToDevice]; // 连接到设备
@@ -321,8 +316,14 @@
 #pragma mark -- Smart device interface
 
 - (void)smartDeviceInfoUpdate:(SmartDevice *)device {
-    NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:[self.smartDevice indexOfObject:device]];
-    [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
+    [UIView performWithoutAnimation:^{ // 无动画
+        [self.table performBatchUpdates:^{
+            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:[self.smartDevice indexOfObject:device]];
+            [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
+        } completion:^(BOOL finished) {
+            [UIView setAnimationsEnabled:YES];
+        }];
+    }];
 }
 
 // 智能设备数据更新

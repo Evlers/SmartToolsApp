@@ -28,4 +28,9 @@
 
 @end
 
+@interface DevParamUITableViewCell : UITableViewCell
+
+
+@end
+
 #endif /* DeviceTableViewCell_h */

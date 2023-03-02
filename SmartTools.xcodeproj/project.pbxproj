@@ -21,7 +21,6 @@
 		9931D5B429A8C9E300D3C947 /* View+MASAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = 9931D5A629A8C9E200D3C947 /* View+MASAdditions.m */; };
 		99394D5E29A34E1E00055CF8 /* DeviceTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 99394D5D29A34E1E00055CF8 /* DeviceTableViewCell.m */; };
 		99442909294FFA320086ACA0 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 99442908294FFA320086ACA0 /* AppDelegate.m */; };
-		99442912294FFA320086ACA0 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 99442910294FFA320086ACA0 /* Main.storyboard */; };
 		99442914294FFA340086ACA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 99442913294FFA340086ACA0 /* Assets.xcassets */; };
 		99442917294FFA340086ACA0 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 99442915294FFA340086ACA0 /* LaunchScreen.storyboard */; };
 		9944291A294FFA340086ACA0 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 99442919294FFA340086ACA0 /* main.m */; };
@@ -87,7 +86,6 @@
 		99442904294FFA320086ACA0 /* SmartTools.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartTools.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		99442907294FFA320086ACA0 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		99442908294FFA320086ACA0 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
-		99442911294FFA320086ACA0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		99442913294FFA340086ACA0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		99442916294FFA340086ACA0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		99442918294FFA340086ACA0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -223,7 +221,6 @@
 				99442913294FFA340086ACA0 /* Assets.xcassets */,
 				99442915294FFA340086ACA0 /* LaunchScreen.storyboard */,
 				99442918294FFA340086ACA0 /* Info.plist */,
-				99442910294FFA320086ACA0 /* Main.storyboard */,
 				99442919294FFA340086ACA0 /* main.m */,
 			);
 			path = SmartTools;
@@ -392,7 +389,6 @@
 				99442917294FFA340086ACA0 /* LaunchScreen.storyboard in Resources */,
 				99442914294FFA340086ACA0 /* Assets.xcassets in Resources */,
 				99618F842995F8EA005F433B /* include in Resources */,
-				99442912294FFA320086ACA0 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -444,14 +440,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		99442910294FFA320086ACA0 /* Main.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				99442911294FFA320086ACA0 /* Base */,
-			);
-			name = Main.storyboard;
-			sourceTree = "<group>";
-		};
 		99442915294FFA340086ACA0 /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -605,7 +593,7 @@
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "APP需要允许蓝牙访问权限才能连接设备，您允许吗？";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
-				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UIMainStoryboardFile = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -635,7 +623,7 @@
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "APP需要允许蓝牙访问权限才能连接设备，您允许吗？";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
-				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UIMainStoryboardFile = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (

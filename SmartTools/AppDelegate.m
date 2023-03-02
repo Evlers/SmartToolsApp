@@ -19,6 +19,11 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
+    self.window=[[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];//创建一个Window
+    self.window.backgroundColor = [UIColor whiteColor];
+    UINavigationController *nav=[[UINavigationController alloc]initWithRootViewController:[[SelectDevice alloc] init]];
+    self.window.rootViewController = nav; //设置好根视图控制器
+    [self.window makeKeyAndVisible]; //设置这个window为主(key)窗口并设置成为可见
     return YES;
 }
 
