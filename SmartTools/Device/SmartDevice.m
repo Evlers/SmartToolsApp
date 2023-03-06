@@ -64,6 +64,7 @@
 // 连接到设备
 - (void)connectToDevice {
     
+    self.battery.paramIsReady = 0; // 所有参数未就绪
     [self updateDeviceState:SmartDeviceBLEConnecting];
     self.centralManager = [[CBCentralManager alloc]initWithDelegate:self queue:dispatch_get_main_queue()]; // 创建中心管理者
     
@@ -73,6 +74,8 @@
         [self.centralManager cancelPeripheralConnection:self.baseInfo.peripheral]; // 取消连接
     });
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 10 * NSEC_PER_SEC), dispatch_get_main_queue(), self.conTimeoutBlock); // 10秒后进入超时处理
+    
+    self.battery.cellVoltage = malloc(SmartBatCellNumber * sizeof(float));
 }
 
 // 断开与设备连接
@@ -80,6 +83,22 @@
     
     dispatch_block_cancel(self.conTimeoutBlock); // 取消超时任务
     [self.centralManager cancelPeripheralConnection:self.baseInfo.peripheral]; // 取消设备连接
+    
+    free(self.battery.cellVoltage);
+}
+
+// 设置功能开关
+- (void)setFunctionSwitch:(uint32_t)sw isOn:(bool)on {
+    protocol_body_t body;
+    body.code = SP_CODE_FUNCTION_SW;
+    body.len = sizeof(uint32_t);
+    body.data = malloc(body.len);
+    if (on) self.battery.functioon_switch |= sw;
+    else self.battery.functioon_switch &= ~sw;
+    uint32_t fun_sw = self.battery.functioon_switch;
+    memcpy(body.data, &fun_sw, sizeof(fun_sw));
+    [self.smart_protocol send_frame_with_fcb:FCB_DEFAULT body:&body];
+    free(body.data);
 }
 
 // 开始固件更新
@@ -120,31 +139,35 @@
     [self.smart_protocol send_get_command:SP_CODE_BAT_TEMP];            // 发送电池温度查询指令
     [self.smart_protocol send_get_command:SP_CODE_FIRMWARE_VER];        // 发送固件版本查询指令
     [self.smart_protocol send_get_command:SP_CODE_HARDWARE_VER];        // 发送硬件版本查询指令
-    [self.smart_protocol send_get_command:SP_CODE_DEV_UUID];            // 发送设备UIUD查询指令
+//    [self.smart_protocol send_get_command:SP_CODE_WORK_MODE];           // 发送工作模式查询指令
     [self.smart_protocol send_get_command:SP_CODE_PROTECT_VOLT];        // 发送电池保护电压查询指令
     [self.smart_protocol send_get_command:SP_CODE_MAX_DISCHARGE_CUR];   // 发送最大放电电流查询指令
     [self.smart_protocol send_get_command:SP_CODE_FUNCTION_SW];         // 发送功能开关状态查询指令
     [self.smart_protocol send_get_command:SP_CODE_WORK_MODE];           // 发送工作模式查询指令
-    [self.smart_protocol send_get_command:SP_CODE_WORK_TIME];           // 发送工作时间查询指令
-    [self.smart_protocol send_get_command:SP_CODE_CHARGE_TIMES];        // 发送充电次数查询指令
-    [self.smart_protocol send_get_command:SP_CODE_DISCHARGE_TIMES];     // 发送放电次数查询指令
     [self.smart_protocol send_get_command:SP_CODE_CURRENT_CUR];         // 发送当前电流查询指令
     [self.smart_protocol send_get_command:SP_CODE_CURRENT_PER];         // 发送当前电量查询指令
     [self.smart_protocol send_get_command:SP_CODE_BATTERY_STATUS];      // 发送电池包状态查询指令
-}
-
-// 查询设备基本信息
-- (void)getDeviceBaseInfo {
-    [self.smart_protocol send_get_command:SP_CODE_FIRMWARE_VER];        // 发送固件版本查询指令
-    [self.smart_protocol send_get_command:SP_CODE_HARDWARE_VER];        // 发送硬件版本查询指令
-    [self.smart_protocol send_get_command:SP_CODE_DEV_UUID];            // 发送设备UIUD查询指令
-}
-
-// 查询电池包基本信息
-- (void)getBattreyBaseInfo {
-    [self.smart_protocol send_get_command:SP_CODE_BATTERY_STATUS];      // 发送电池包状态查询指令
-    [self.smart_protocol send_get_command:SP_CODE_BAT_TEMP];            // 发送电池温度查询指令
-    [self.smart_protocol send_get_command:SP_CODE_CURRENT_PER];         // 发送当前电量查询指令
+    
+    dispatch_block_t block = dispatch_block_create(DISPATCH_BLOCK_BARRIER, ^{
+        [self.smart_protocol send_get_command:SP_CODE_MANU_DATE];           // 发送生产日期查询指令
+        [self.smart_protocol send_get_command:SP_CODE_READ_OVERCUR_NUM];    // 查询设备过流次数
+        [self.smart_protocol send_get_command:SP_CODE_READ_SHORT_NUM];      // 查询设备短路次数
+        [self.smart_protocol send_get_command:SP_CODE_WORK_TIME];           // 发送工作时间查询指令
+        [self.smart_protocol send_get_command:SP_CODE_CHARGE_TIMES];        // 发送充电次数查询指令
+        [self.smart_protocol send_get_command:SP_CODE_DISCHARGE_TIMES];     // 发送放电次数查询指令
+        [self.smart_protocol send_get_command:SP_CODE_DEV_UUID];            // 发送设备UIUD查询指令
+        // 查询总电压以及每节电池电压
+        for (int i = 0; i < SmartBatCellNumber + 1; i ++) {
+            protocol_body_t body;
+            body.code = SP_CODE_READ_BAT_VOL;
+            body.len = 1;
+            body.data = malloc(body.len);
+            body.data[0] = i;
+            [self.smart_protocol send_frame_with_fcb:FCB_DEFAULT body:&body];
+            free(body.data);
+        }
+    });
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1000 * NSEC_PER_MSEC), dispatch_get_main_queue(), block);
 }
 
 // 更新设备状态
@@ -189,15 +212,15 @@
 // 设备指令处理
 - (void)commandHandler:(uint8_t) code body:(protocol_body_t *) body {
     
-    if (self.delegate == nil || [self.delegate respondsToSelector:@selector(smartDevice:dataUpdate:)] == false) {
-        return ;
-    }
+#define  didDataUpdate(dic)     if (self.delegate != nil && [self.delegate respondsToSelector:@selector(smartDevice:dataUpdate:)]) { \
+                                    [self.delegate smartDevice:self dataUpdate:dic]; \
+                                }
     
     switch (code)
     {
         case SP_CODE_CONNECT: // 握手连接
             dispatch_block_cancel(self.conTimeoutBlock); // 取消超时任务
-            [self.delegate smartDevice:self dataUpdate:@{@"Handshake connection": self.baseInfo}];
+            didDataUpdate(@{@"Handshake connection": self.baseInfo});
             [self updateDeviceState:SmartDeviceConnectSuccess];
             [self getDeviceAllData];// 查询设备所有参数
             break;
@@ -207,14 +230,14 @@
                self.baseInfo.boot_firmware_version = [NSString stringWithFormat:@"v%d.%d.%d", body->data[0], body->data[1], body->data[2]];
                self.baseInfo.app_firmware_version = [NSString stringWithFormat:@"v%d.%d.%d", body->data[3], body->data[4], body->data[5]];
                NSArray *version_info = [[NSArray alloc]initWithObjects:self.baseInfo.boot_firmware_version, self.baseInfo.app_firmware_version, nil];
-               [self.delegate smartDevice:self dataUpdate:@{@"Firmware version" : version_info}];
+               didDataUpdate(@{@"Firmware version" : version_info});
             }
             break;
             
         case SP_CODE_HARDWARE_VER: // 设备应答硬件版本信息
             if (body->len == 3) {
                 self.baseInfo.hardware_version = [NSString stringWithFormat:@"v%d.%d.%d", body->data[0], body->data[1], body->data[2]];
-                [self.delegate smartDevice:self dataUpdate:@{@"Hardware version" : self.baseInfo.hardware_version}];
+                didDataUpdate(@{@"Hardware version" : self.baseInfo.hardware_version});
             }
             break;
             
@@ -223,108 +246,185 @@
                 self.baseInfo.uuid = [NSString stringWithFormat:@"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
                                          body->data[0], body->data[1], body->data[2], body->data[3], body->data[4], body->data[5],
                                          body->data[6], body->data[7], body->data[8], body->data[9], body->data[10], body->data[11]];
-                [self.delegate smartDevice:self dataUpdate:@{@"Device uuid" : self.baseInfo.uuid}];
+                didDataUpdate(@{@"Device uuid" : self.baseInfo.uuid});
             }
             break;
             
         case SP_CODE_BAT_TEMP:
             if (body->len == sizeof(int16_t)) {
-                int16_t bat_temp = body->data[0] | (((uint16_t)body->data[1]) << 8);
-                self.battery.temperature = [NSString stringWithFormat:@"%d°C", (int)((float)bat_temp / 10.0)];
-                [self.delegate smartDevice:self dataUpdate:@{@"Battery temperature" : self.battery.temperature}];
+                self.battery.temperature = (int16_t)(dataToU16(body->data)) / 10;
+                NSString *temp = [NSString stringWithFormat:@"%d°C", self.battery.temperature];
+                didDataUpdate(@{@"Battery temperature" : temp});
+                self.battery.paramIsReady |= SmartBatReadyOfTemp;
             }
             break;
             
         case SP_CODE_PROTECT_VOLT:
             if (body->len == sizeof(uint16_t)) {
-                uint16_t volt = body->data[0] | (((uint16_t)body->data[1]) << 8);
-                NSString *voltage = [NSString stringWithFormat:@"%0.2fV", (float)volt / 1000.0];
-                [self.delegate smartDevice:self dataUpdate:@{@"Protection voltage" : voltage}];
+                uint16_t volt = dataToU16(body->data);
+                self.battery.protectVoltage = volt / 1000.0;
+                NSString *voltage = [NSString stringWithFormat:@"%0.2fV", self.battery.protectVoltage];
+                didDataUpdate(@{@"Protection voltage" : voltage});
+                self.battery.paramIsReady |= SmartBatReadyOfProtectVolt;
             }
             break;
             
         case SP_CODE_MAX_DISCHARGE_CUR:
             if (body->len == sizeof(uint16_t)) {
-                uint16_t cur = body->data[0] | (((uint16_t)body->data[1]) << 8);
-                NSString *current = [NSString stringWithFormat:@"%uA", cur];
-                [self.delegate smartDevice:self dataUpdate:@{@"Maximum discharge current" : current}];
+                self.battery.maxDischargingCurrent = dataToU16(body->data);
+                NSString *current = [NSString stringWithFormat:@"%.0fA", self.battery.maxDischargingCurrent];
+                didDataUpdate(@{@"Maximum discharge current" : current});
+                self.battery.paramIsReady |= SmartBatReadyOfMaxDischargingCur;
             }
             break;
             
         case SP_CODE_FUNCTION_SW:
             if (body->len == sizeof(uint32_t)) {
-                uint32_t sw = body->data[0] | (((uint32_t)body->data[1]) << 8) |
-                (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
-                NSString *fun_sw = [NSString stringWithFormat:@"BM[%08X]", sw];
-                [self.delegate smartDevice:self dataUpdate:@{@"Function switch" : fun_sw}];
+                self.battery.functioon_switch = dataToU32(body->data);
+                NSString *fun_sw = [NSString stringWithFormat:@"BM[%08X]", self.battery.functioon_switch];
+                didDataUpdate(@{@"Function switch" : fun_sw});
+                self.battery.paramIsReady |= SmartBatReadyOfFunSw;
             }
             break;
             
         case SP_CODE_BATTERY_STATUS:
             if (body->len == sizeof(uint32_t)) {
-                uint32_t status = body->data[0] | (((uint32_t)body->data[1]) << 8) |
-                (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
+                uint32_t status = dataToU32(body->data);
                 uint8_t bat_io_sta = status & 0x00000007; // Bit0 ~ 2
+                NSString *state;
                 switch (bat_io_sta)
                 {
-                    case 0: self.battery.state = [NSString stringWithFormat:@"Standby"]; break;
-                    case 1: self.battery.state = [NSString stringWithFormat:@"Charging"]; break;
-                    case 2: self.battery.state = [NSString stringWithFormat:@"Discharging"]; break;
-                    case 3: self.battery.state = [NSString stringWithFormat:@"Charge complete"]; break;
+                    case 0: self.battery.state = SmartBatteryStateStandby; state = [NSString stringWithFormat:@"Standby"]; break;
+                    case 1: self.battery.state = SmartBatteryStateCharging; state = [NSString stringWithFormat:@"Charging"]; break;
+                    case 2: self.battery.state = SmartBatteryStateDischarging; state = [NSString stringWithFormat:@"Discharging"]; break;
+                    case 3: self.battery.state = SmartBatteryStateChargeComplete; state = [NSString stringWithFormat:@"Charge complete"]; break;
                 }
-                [self.delegate smartDevice:self dataUpdate:@{@"Battery status" : self.battery.state}];
+                self.battery.isLock = status & 0x00000008; // Bit3
+                didDataUpdate(@{@"Battery status" : state});
+                self.battery.paramIsReady |= SmartBatReadyOfState;
             }
             break;
             
         case SP_CODE_WORK_MODE:
             if (body->len == sizeof(uint8_t)) {
-                uint8_t mode = body->data[0];
-                NSString *work_mode = [NSString stringWithFormat:@"%d", mode];
-                [self.delegate smartDevice:self dataUpdate:@{@"Work mode" : work_mode}];
+                self.battery.workMode = body->data[0];
+                NSString *work_mode = [NSString stringWithFormat:@"%d", self.battery.workMode];
+                didDataUpdate(@{@"Work mode" : work_mode});
+                self.battery.paramIsReady |= SmartBatReadyOfWorkMode;
             }
             break;
             
         case SP_CODE_CHARGE_TIMES:
             if (body->len == sizeof(uint32_t)) {
-                uint32_t times = body->data[0] | (((uint32_t)body->data[1]) << 8) |
-                (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
-                NSString *charger_times = [NSString stringWithFormat:@"%u", times];
-                [self.delegate smartDevice:self dataUpdate:@{@"Charger times" : charger_times}];
+                self.battery.numberOfCharging = dataToU32(body->data);
+                NSString *charger_times = [NSString stringWithFormat:@"%u", self.battery.numberOfCharging];
+                didDataUpdate(@{@"Charger times" : charger_times});
+                self.battery.paramIsReady |= SmartBatReadyOfNumberOfCharging;
             }
             break;
             
         case SP_CODE_DISCHARGE_TIMES:
             if (body->len == sizeof(uint32_t)) {
-                uint32_t times = body->data[0] | (((uint32_t)body->data[1]) << 8) |
-                (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
-                NSString *discharger_times = [NSString stringWithFormat:@"%u", times];
-                [self.delegate smartDevice:self dataUpdate:@{@"Discharger times" : discharger_times}];
+                self.battery.numberOfDischarging = dataToU32(body->data);
+                NSString *discharger_times = [NSString stringWithFormat:@"%u", self.battery.numberOfDischarging];
+                didDataUpdate(@{@"Discharger times" : discharger_times});
+                self.battery.paramIsReady |= SmartBatReadyOfNumberOfDischarging;
             }
             break;
             
         case SP_CODE_WORK_TIME:
             if (body->len == sizeof(uint32_t)) {
-                uint32_t time = body->data[0] | (((uint32_t)body->data[1]) << 8) |
-                (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
-                NSString *work_time = [NSString stringWithFormat:@"%u hour", time];
-                [self.delegate smartDevice:self dataUpdate:@{@"Work time" : work_time}];
+                self.battery.accumulatedWorkTime = dataToU32(body->data);
+                NSString *work_time = [NSString stringWithFormat:@"%u hour", self.battery.accumulatedWorkTime];
+                didDataUpdate(@{@"Work time" : work_time});
+                self.battery.paramIsReady |= SmartBatReadyOfWorkTime;
             }
             break;
             
         case SP_CODE_CURRENT_CUR:
             if (body->len == sizeof(uint32_t)) {
-                uint32_t cur = body->data[0] | (((uint32_t)body->data[1]) << 8) |
-                (((uint32_t)body->data[2]) << 16) | (((uint32_t)body->data[3]) << 24);
-                NSString *current = [NSString stringWithFormat:@"%0.2fA", (float)cur / 1000.0];
-                [self.delegate smartDevice:self dataUpdate:@{@"Current current" : current}];
+                uint32_t cur = dataToU32(body->data);
+                self.battery.currentCurrent = (float)cur / 1000.0;
+                NSString *current = [NSString stringWithFormat:@"%0.2fA", self.battery.currentCurrent];
+                didDataUpdate(@{@"Current current" : current});
+                self.battery.paramIsReady |= SmartBatReadyOfCurCur;
             }
             break;
             
         case SP_CODE_CURRENT_PER:
             if (body->len == sizeof(uint8_t)) {
-                uint8_t percent = body->data[0];
-                self.battery.percent = [NSString stringWithFormat:@"%d%%", percent];
-                [self.delegate smartDevice:self dataUpdate:@{@"Battery percent" : self.battery.percent}];
+                self.battery.percent = body->data[0];
+                NSString *percent = [NSString stringWithFormat:@"%d%%", self.battery.percent];
+                didDataUpdate(@{@"Battery percent" : percent});
+                self.battery.paramIsReady |= SmartBatReadyOfPercent;
+            }
+            break;
+            
+        case SP_CODE_READ_SHORT_NUM:
+            if (body->len == sizeof(uint32_t)) {
+                self.battery.numberOfShortCircuit = dataToU32(body->data);
+                NSString *numberOfShortCircuit = [NSString stringWithFormat:@"%d", self.battery.numberOfShortCircuit];
+                didDataUpdate(@{@"Number of shortCircuit" : numberOfShortCircuit});
+                self.battery.paramIsReady |= SmartBatReadyOfNumberOfShortCircuit;
+            }
+            break;
+            
+        case SP_CODE_READ_OVERCUR_NUM:
+            if (body->len == sizeof(uint32_t)) {
+                self.battery.numberOfOverCurrent = dataToU32(body->data);
+                NSString *numberOfOverCurrent = [NSString stringWithFormat:@"%d", self.battery.numberOfOverCurrent];
+                didDataUpdate(@{@"Number of over current" : numberOfOverCurrent});
+                self.battery.paramIsReady |= SmartBatReadyOfNumberOfOverCurrent;
+            }
+            break;
+            
+        case SP_CODE_MANU_DATE:
+            if (body->len == sizeof(uint32_t)) {
+                uint32_t timestamp = dataToU32(body->data);
+                self.battery.dateOfManufacture = [NSDate dateWithTimeIntervalSince1970:timestamp];
+                
+                NSDateFormatter *dateFormatter = [NSDateFormatter new];
+                [dateFormatter setDateFormat:@"yyyy-MM"]; // 格式化时间
+                NSString *dateOfManufacture = [dateFormatter stringFromDate:self.battery.dateOfManufacture];
+                didDataUpdate(@{@"Date of manufacture" : dateOfManufacture});
+                self.battery.paramIsReady |= SmartBatReadyOfDateofManu;
+            }
+            break;
+            
+        case SP_CODE_UPLOAD_EVENT:
+            if (body->len == sizeof(uint32_t)) {
+                self.battery.events = dataToU32(body->data);
+                NSString *events = [NSString stringWithFormat:@"%08X", self.battery.events];
+                didDataUpdate(@{@"Battery events" : events});
+                self.battery.paramIsReady |= SmartBatReadyOfEvents;
+            }
+            break;
+            
+        case SP_CODE_READ_BAT_VOL:
+            if (body->len == (sizeof(uint8_t) + sizeof(uint32_t))) {
+                uint8_t cell = body->data[0];
+                uint32_t volt = dataToU32(((uint8_t *)body->data + 1));
+                
+                if (cell > 7) {
+                    NSLog(@"error fromat in battery cell %d.", cell);
+                    break;
+                }
+                
+                if (cell == 0) // 总电压
+                    self.battery.totalVoltage = (float)volt / 1000.0;
+                else // 每节电压
+                    self.battery.cellVoltage[cell - 1] = (float)volt / 1000.0;
+                
+                if (cell == 0) {
+                    NSString *volt = [NSString stringWithFormat:@"%fv", self.battery.totalVoltage];
+                    didDataUpdate(@{@"Battery total voltage" : volt});
+                    self.battery.paramIsReady |= SmartBatReadyOfTotalVolt;
+                } else {
+                    NSString *volt = [NSString stringWithFormat:@"%fv", self.battery.cellVoltage[cell - 1]];
+                    didDataUpdate(@{@"Battery cell voltage" : volt});
+                    self.battery.paramIsReady |= SmartBatReadyOfCellVolt;
+                }
+                
             }
             break;
             
@@ -332,7 +432,8 @@
         {
             NSData *body_code = [[NSData alloc]initWithBytes:&code length:1];
             NSData *body_data = [[NSData alloc]initWithBytes:body->data length:body->len];
-            [self.delegate smartDevice:self dataUpdate:@{@"Unknown code" : @{@"body code" : body_code, @"body data" : body_data}}];
+            NSDictionary *data = @{@"Unknown code" : @{@"body code" : body_code, @"body data" : body_data}};
+            didDataUpdate(data);
             return ;
         }
     }

@@ -66,11 +66,11 @@
     // Do any additional setup after loading the view.
     self.view.backgroundColor = [UIColor colorWithWhite:0.95 alpha:1];
     self.upgradeFile = nil;
-    cornerRadius = 8.f;
+    cornerRadius = 10.0;
     self.data_point = [NSMutableArray array];
     
     // 创建TableView
-    self.table = [[UITableView alloc]init];
+    self.table = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, 0, 0) style:UITableViewStyleGrouped];
     self.table.delegate = self;
     self.table.dataSource = self;
     self.table.estimatedRowHeight = UITableViewAutomaticDimension; // 预计高度
@@ -81,29 +81,8 @@
         make.edges.equalTo(self.view);
     }];
     
-    // device base info
-    NSMutableArray *dev_base_info = [NSMutableArray array];
-    [dev_base_info addObject:[[DataPoint alloc]initWithName:@"Firmware version"]];
-    [dev_base_info addObject:[[DataPoint alloc]initWithName:@"Hardware version"]];
-    [dev_base_info addObject:[[DataPoint alloc]initWithName:@"Device uuid"]];
-    [self.data_point addObject:dev_base_info];
-    [self.table insertSections:[NSIndexSet indexSetWithIndex:self.data_point.count] withRowAnimation:UITableViewRowAnimationNone]; // 插入数据
-    
-    // battery base info
-    NSMutableArray *bat_base_info = [NSMutableArray array];
-    [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Battery temperature"]];
-    [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Protection voltage"]];
-    [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Maximum discharge current"]];
-    [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Function switch"]];
-    [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Battery status"]];
-    [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Work mode"]];
-    [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Work time"]];
-    [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Charger times"]];
-    [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Discharger times"]];
-    [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Current current"]];
-    [bat_base_info addObject:[[DataPoint alloc]initWithName:@"Battery percent"]];
-    [self.data_point addObject:bat_base_info];
-    [self.table insertSections:[NSIndexSet indexSetWithIndex:self.data_point.count] withRowAnimation:UITableViewRowAnimationNone]; // 插入数据
+    [self conofigTableViewItem]; // 配置列表显示项目
+    [self settingCellValue]; // 设置列表显示的值
     
     // 读取所有文件
     NSString *inboxPath = [NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/Inbox/"]]; // 总文件夹
@@ -114,17 +93,61 @@
 -(void)viewWillAppear:(BOOL)animated {
     
     self.smartDevice.delegate = self; // 代理智能设备接口
-    if (self.smartDevice.baseInfo.peripheral.state == CBPeripheralStateConnected) // 如果已连接蓝牙
-        [self.smartDevice getDeviceAllData]; // 查询所有设备信息
-    else { // 未连接，等待设备连接
+    
+    if (self.smartDevice.baseInfo.peripheral.state != CBPeripheralStateConnected) { // 如果未连接蓝牙
         self.alert = [UIAlertController alertControllerWithTitle:@"Cconnecting" message:@"Connecting device.." preferredStyle:UIAlertControllerStyleAlert];
         [self presentViewController:self.alert animated:YES completion:nil]; // 显示提示窗口
-    }
+    } else
+        [self.smartDevice getDeviceAllData]; // 查询所有设备信息
     
     self.title = self.smartDevice.baseInfo.product_info.default_name; // 刷新标题
 }
 
 #pragma mark -- TableView 接口
+
+- (void)conofigTableViewItem {
+    // 设置项目
+    NSMutableArray *setting = [NSMutableArray array];
+    [setting addObject:[[DataPoint alloc]initWithName:@"Anti-theft lock"]];
+    [setting addObject:[[DataPoint alloc]initWithName:@"Protection voltage"]];
+    [setting addObject:[[DataPoint alloc]initWithName:@"Maximum discharge current"]];
+    [self.data_point addObject:setting];
+    [self.table insertSections:[NSIndexSet indexSetWithIndex:self.data_point.count] withRowAnimation:UITableViewRowAnimationNone]; // 插入数据
+    
+    // 功能开关
+    NSMutableArray *function_switch = [NSMutableArray array];
+    [function_switch addObject:[[DataPoint alloc]initWithName:@"High temperature alarm switch" type:UITableViewCellAccessoryDetailDisclosureButton]];
+    [function_switch addObject:[[DataPoint alloc]initWithName:@"Indicator light flashes" type:UITableViewCellAccessoryDetailDisclosureButton]];
+    
+    [self.data_point addObject:function_switch];
+    [self.table insertSections:[NSIndexSet indexSetWithIndex:self.data_point.count] withRowAnimation:UITableViewRowAnimationNone]; // 插入数据
+    
+    // 信息 统计 固件版本
+    NSMutableArray *infoAndVersion = [NSMutableArray array];
+    [infoAndVersion addObject:[[DataPoint alloc]initWithName:@"Information" type:UITableViewCellAccessoryDisclosureIndicator]];
+    [infoAndVersion addObject:[[DataPoint alloc]initWithName:@"Statistics" type:UITableViewCellAccessoryDisclosureIndicator]];
+    [infoAndVersion addObject:[[DataPoint alloc]initWithName:@"Firmware version"]];
+    [self.data_point addObject:infoAndVersion];
+    [self.table insertSections:[NSIndexSet indexSetWithIndex:self.data_point.count] withRowAnimation:UITableViewRowAnimationNone]; // 插入数据
+}
+
+- (void)settingCellValue {
+    
+    for (NSMutableArray *group in self.data_point) {
+        for (DataPoint *dataPiont in group) {
+            if ([dataPiont.name isEqualToString:@"Protection voltage"])
+                dataPiont.value = [NSString stringWithFormat:@"%0.2fv", self.smartDevice.battery.protectVoltage];
+            else if ([dataPiont.name isEqualToString:@"Maximum discharge current"])
+                dataPiont.value = [NSString stringWithFormat:@"%.0fA", self.smartDevice.battery.maxDischargingCurrent];
+            else if ([dataPiont.name isEqualToString:@"High temperature alarm switch"])
+                dataPiont.value = (self.smartDevice.battery.functioon_switch & SmartBatFunSwHighTempAlarm) ? @"true" : @"False";
+            else if ([dataPiont.name isEqualToString:@"Indicator light flashes"])
+                dataPiont.value = (self.smartDevice.battery.functioon_switch & SmartBatFunSwLedBlink) ? @"True" : @"False";
+            else if ([dataPiont.name isEqualToString:@"Firmware version"])
+                dataPiont.value = self.smartDevice.baseInfo.app_firmware_version;
+        }
+    }
+}
 
 // 返回组数量
 -(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
@@ -138,15 +161,14 @@
     return ((NSMutableArray *)[self.data_point objectAtIndex:section - 1]).count;
 }
 
+// 组头高度
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
+    return 1;
+}
+
 // 返回每组的头数据
 -(NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
-    switch(section)
-    {
-        case 0: return @"Base info";
-        case 1: return @"Device info";
-        case 2: return @"Battery info";
-        default: return @"Unknown section";
-    }
+    return @" ";
 }
 
 // TableView接口：即将显示Cell
@@ -202,10 +224,37 @@
             cell = [[DevParamUITableViewCell alloc]initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:identifier]; // 创建新的Cell
         }
         
-        // 配置通用Cell的显示数据
-        cell.accessoryType = data_point.accessoryType;
-        cell.textLabel.text = data_point.name;
-        cell.detailTextLabel.text = (data_point.value == nil) ? @"" : data_point.value;
+        if (indexPath.section == 1 && indexPath.row == 0) { // 防盗锁
+            UIImageView *imageView = [[UIImageView alloc]initWithImage:[UIImage imageNamed:(self.smartDevice.battery.isLock) ? @"锁定" : @"解锁"]];
+            imageView.frame = CGRectMake(0, 0, 25, 25);
+            
+            cell.textLabel.text = data_point.name;
+            cell.accessoryView = imageView;
+            cell.detailTextLabel.text = nil;
+            
+        } else if (indexPath.section == 2) {
+            uint32_t bit = 0;
+            switch (indexPath.row)
+            {
+                case 0: bit = SmartBatFunSwHighTempAlarm; break;
+                case 1: bit = SmartBatFunSwLedBlink; break;
+            }
+            
+            UISwitch *sw = [[UISwitch alloc]init];
+            sw.tag = indexPath.row;
+            [sw setOn:(self.smartDevice.battery.functioon_switch & bit) ? true : false];
+            [sw addTarget:self action:@selector(functionSwitchChange:) forControlEvents:UIControlEventValueChanged];
+            
+            cell.textLabel.text = data_point.name;
+            cell.accessoryView = sw;
+            cell.detailTextLabel.text = nil;
+            
+        } else {
+            cell.accessoryType = data_point.accessoryType;
+            cell.textLabel.text = data_point.name;
+            cell.detailTextLabel.text = (data_point.value == nil) ? @"" : data_point.value;
+            cell.accessoryView = nil;
+        }
         return cell;
     }
 }
@@ -325,6 +374,14 @@
 }
 
 #pragma mark -- Smart device interface
+
+- (void) functionSwitchChange:(UISwitch *)sw {
+    switch (sw.tag)
+    {
+        case 0: [self.smartDevice setFunctionSwitch:SmartBatFunSwHighTempAlarm isOn:sw.isOn]; break; //  高温告警
+        case 1: [self.smartDevice setFunctionSwitch:SmartBatFunSwLedBlink isOn:sw.isOn]; break; // 指示灯闪烁
+    }
+}
 
 // 提示更新信息
 - (void)promptUpdateInformation {
@@ -482,8 +539,6 @@
 // 智能设备数据更新
 - (void)smartDevice:(SmartDevice *)device dataUpdate:(NSDictionary <NSString *, id>*)data; {
     
-    NSIndexPath *index = nil;
-    
     for (NSString *key in data) { // 遍历字典
         if ([key containsString:@"Handshake connection"]) { // 握手连接
             NSLog(@"Handshake connect success.");
@@ -496,29 +551,12 @@
             
             [self searchUpgradeFile]; // 搜索可用的升级文件
             UITableViewCellAccessoryType type = (self.upgradeFile == nil || self.upgradeFile.count == 0) ? UITableViewCellAccessoryNone : UITableViewCellAccessoryDisclosureIndicator;
-            index = [self set_data_poinit:key value:app_version type:type]; // 设置Cell
+            [self set_data_poinit:key value:app_version type:type]; // 设置Cell
             
         } else if ([key containsString:@"Hardware version"]) { // 硬件版本
             [self searchUpgradeFile]; // 搜索可用的升级文件
             UITableViewCellAccessoryType type = (self.upgradeFile == nil || self.upgradeFile.count == 0) ? UITableViewCellAccessoryNone : UITableViewCellAccessoryDisclosureIndicator;
-            index = [self set_data_poinit:@"Firmware version" value:self.smartDevice.baseInfo.app_firmware_version type:type]; // 设置固件版本Cell
-            [UIView performWithoutAnimation:^{ // 无动画
-                [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:index] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
-            }];
-            index = [self set_data_poinit:key value:data[key]]; // 设置硬件版本Cell
-            
-        } else {// 其他数据的key跟数据点名称一样，且value都是NSString类型的
-            index = [self set_data_poinit:key value:data[key]]; // 根据key更新对应数据点的值
-            if (index == nil) { // 未知数据
-                NSDictionary *unknown = data[key];
-                NSLog(@"Unknown code: %d data: %@", ((uint8_t *)((NSData *)unknown[@"body code"]).bytes)[0], unknown[@"body data"]);
-            }
-        }
-        
-        if (index != nil) { // 已更新对应的数据点, 通知UITableView更新显示数据
-            [UIView performWithoutAnimation:^{ // 无动画
-                [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:index] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
-            }];
+            [self set_data_poinit:@"Firmware version" value:self.smartDevice.baseInfo.app_firmware_version type:type]; // 设置固件版本Cell
         }
         
         // 刷新设备基本信息
@@ -526,6 +564,16 @@
             NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:0];
             [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新设备基本信息
         }];
+        
+        // 刷新列表中的数据
+        for (int section = 0; section < self.data_point.count; section ++) {
+            for (int row = 0; row < ((NSMutableArray *)[self.data_point objectAtIndex:section]).count; row ++) {
+                [UIView performWithoutAnimation:^{ // 无动画
+                    NSIndexPath *i = [NSIndexPath indexPathForRow:row inSection:section + 1];
+                    [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:i] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
+                }];
+            }
+        }
     }
 }
 

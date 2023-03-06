@@ -95,18 +95,21 @@ typedef enum {
     SP_CODE_READ_OVERCUR_NUM,               // 上报/读取过流次数
     SP_CODE_BATTERY_STATUS,                 // 上报/读取电池包状态
 
-    // Subdevice interface
-    SP_CODE_UPLOAD_TOOLS = 0x30,            // 上报工具数据
-    SP_CODE_DOWNLOAD_TOOLS,                 // 下发工具数据
-    SP_CODE_UPLOAD_CHARGER,                 // 上报充电器数据
-    SP_CODE_DOWNLOAD_CHARGER,               // 下发充电器数据
-
     // Firmware Upgrade interface
     SP_CODE_UPGRADE_REQUEST = 0x50,         // 升级请求
     SP_CODE_UPGRADE_FILE_INFO,              // 文件信息
     SP_CODE_UPGRADE_FILE_OFFSET,            // 文件偏移
     SP_CODE_UPGRADE_FILE_DATA,              // 文件数据
     SP_CODE_UPGRADE_END,                    // 升级结束
+    
+    // Subdevice interface
+    SP_CODE_UPLOAD_TOOLS = 0x30,            // 上报工具数据
+    SP_CODE_DOWNLOAD_TOOLS,                 // 下发工具数据
+    SP_CODE_UPLOAD_CHARGER,                 // 上报充电器数据
+    SP_CODE_DOWNLOAD_CHARGER,               // 下发充电器数据
+    
+    // Test interface
+    
 
     SP_CODE_NUM,
 } smart_protocol_cmd_code;

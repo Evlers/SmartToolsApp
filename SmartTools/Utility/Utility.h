@@ -11,6 +11,9 @@
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
 
+#define dataToU16(data)             data[0] | (((uint32_t)data[1]) << 8)
+#define dataToU32(data)             data[0] | (((uint32_t)data[1]) << 8) | (((uint32_t)data[2]) << 16) | (((uint32_t)data[3]) << 24);
+
 @interface FileInfo : NSObject
 
 @property (nonatomic, strong) NSString  *name;

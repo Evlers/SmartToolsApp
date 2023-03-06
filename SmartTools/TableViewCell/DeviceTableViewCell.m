@@ -60,6 +60,7 @@
         [self.connectBtn setTitle:@"Connect device" forState:UIControlStateNormal];
         [self.connectBtn setTitleColor:[UIColor colorWithHexString:@"FF9040"] forState:UIControlStateNormal];
         [self.contentView addSubview:self.connectBtn];
+        self.connectBtn.hidden = true;
         
         // 约束所有子控件
         CGFloat devImageSize = DEVICE_IMG_SIZE; // 设置设备图片高度以及宽度
@@ -144,7 +145,8 @@
     
     if (state == SmartDeviceConnectSuccess)
     {
-        if (battery.temperature == nil && battery.state == nil && battery.percent == nil) { // 如果其中一个数据未准备好
+        uint32_t term = SmartBatReadyOfTemp|SmartBatReadyOfState|SmartBatReadyOfPercent;
+        if ((battery.paramIsReady & term) != term) { // 如果其中一个数据未准备好
             [self.connectBtn setTitle:@"Request data.." forState:UIControlStateNormal];
             return ;
         }
@@ -153,25 +155,34 @@
         self.connectBtn.hidden = true;
         self.tempIcon.hidden = self.percentIcon.hidden = self.statusIcon.hidden = false;
         self.bleImage.image = [UIImage imageNamed:@"蓝牙已连接"];
-        if (battery.temperature)
-            self.tempValue.text = battery.temperature;
-        if (battery.percent)
-            self.percentValue.text = battery.percent;
-        if (battery.state) {
-            self.statusDescribe.text = battery.state;
-            if ([battery.state isEqualToString:@"Standby"]) {
-                self.statusIcon.image = [UIImage imageNamed:@"待机中"];
+        self.tempValue.text = [NSString stringWithFormat:@"%d°C", battery.temperature];
+        self.percentValue.text = [NSString stringWithFormat:@"%d%%", battery.percent];
+        
+        switch (battery.state)
+        {
+            case SmartBatteryStateStandby:
+                self.statusDescribe.text = @"Standby";
                 self.statusDescribe.textColor = [UIColor colorWithHexString:@"FF9040"];
-            } else if ([battery.state isEqualToString:@"Charging"]) {
+                self.statusIcon.image = [UIImage imageNamed:@"待机中"];
+                break;
+                
+            case SmartBatteryStateCharging:
+                self.statusDescribe.text = @"Charging";
+                self.statusDescribe.textColor = [UIColor colorWithHexString:@"6BD7B0"];
                 self.statusIcon.image = [UIImage imageNamed:@"充电中"];
-                self.statusDescribe.textColor = [UIColor colorWithHexString:@"6BD7B0"];
-            } else if ([battery.state isEqualToString:@"Discharging"]) {
-                self.statusIcon.image = [UIImage imageNamed:@"放电中"];
+                break;
+                
+            case SmartBatteryStateDischarging:
+                self.statusDescribe.text = @"Discharging";
                 self.statusDescribe.textColor = [UIColor colorWithHexString:@"3E95D5"];
-            } else if ([battery.state isEqualToString:@"Charge complete"]) {
-                self.statusIcon.image = [UIImage imageNamed:@"充电完成"];
+                self.statusIcon.image = [UIImage imageNamed:@"放电中"];
+                break;
+                
+            case SmartBatteryStateChargeComplete:
+                self.statusDescribe.text = @"Charge complete";
                 self.statusDescribe.textColor = [UIColor colorWithHexString:@"6BD7B0"];
-            }
+                self.statusIcon.image = [UIImage imageNamed:@"充电完成"];
+                break;
         }
     }
     else
@@ -243,7 +254,7 @@
     NSInteger cornerInterval = self.frame.size.width * 0.05;
     frame.size.width -= cornerInterval * 2;
     frame.origin.x += cornerInterval;
-    frame.size.height = 44;
+    frame.size.height = 54;
     [super setFrame:frame];
 }
 

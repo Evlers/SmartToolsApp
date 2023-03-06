@@ -34,7 +34,10 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view.
-    self.title = @"Home page";
+    UITabBarItem *tabBarItem = [[UITabBarItem alloc]initWithTitle:@"Home" image:nil tag:101];
+    tabBarItem.image = [[UIImage imageNamed:@"home40x40"] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+    tabBarItem.selectedImage = tabBarItem.image;
+    self.tabBarItem = tabBarItem;
     self.view.backgroundColor = [UIColor colorWithWhite:0.95 alpha:1];
     
     // 初始化产品信息
@@ -49,7 +52,7 @@
     self.smartDevice = [NSMutableArray array];
     
     // 初始化cell的圆角半径
-    cornerRadius = 8.f;
+    cornerRadius = 10.0;
     // 配置 TableView
     self.table = [[UITableView alloc]init];
     self.table.delegate = self;              // 设置代理
@@ -117,16 +120,17 @@
     }
 }
 
+// 将进入界面
+- (void)viewWillAppear:(BOOL)animated {
+    [self.table reloadData];
+}
+
 // 已经进入界面
 -(void)viewDidAppear:(BOOL)animated {
     
     for (SmartDevice *smartDevice in self.smartDevice) {
         smartDevice.delegate = self; // 夺回设备的代理
-        if (smartDevice.baseInfo.state == SmartDeviceConnectSuccess) { // 如果已连接的设备
-            [smartDevice getBattreyBaseInfo]; // 获取电池包基本信息(刷新卡片中的信息)
-        }
     }
-    [self.table reloadData];
 }
 
 - (void)didReceiveMemoryWarning {
