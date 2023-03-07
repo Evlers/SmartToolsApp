@@ -3,11 +3,6 @@ Smart tools application for IOS
 
 
 ## Exhibition
-*Home page*
-[<img src = "./image/home.jpeg">]
-
-*Device page*
-[<img src = "./image/SmartDevice.jpeg">]
-
-*OTA page*
-[<img src = "./image/OTA.jpeg">]
+<img width="30%" align="left" src = "https://github.com/Evlers/SmartToolsApp/blob/main/images/Home.jpeg">
+<img width="30%" align="right" src = "https://github.com/Evlers/SmartToolsApp/blob/main/images/OTA.jpeg">
+<img width="30%" align="centre" src = "https://github.com/Evlers/SmartToolsApp/blob/main/images/SmartDevice.jpeg">
