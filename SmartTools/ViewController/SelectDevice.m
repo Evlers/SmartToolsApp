@@ -274,9 +274,7 @@
                     cell = [[DeviceTableViewCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"DeviceTableViewCell"];
                 }
                 
-                SmartBattery *battery = [self.smartDevice objectAtIndex:indexPath.section].battery;
-                
-                [cell setDeviceName:baseInfo.name state:baseInfo.state info:battery]; // 设置基本信息
+                [cell setSmartDeviceInfo:[self.smartDevice objectAtIndex:indexPath.section]]; // 设置设备信息
                 cell.connectBtn.tag = indexPath.section; // 记录按钮位置
                 [cell.connectBtn addTarget:self action:@selector(connectButtonClicked:) forControlEvents:UIControlEventTouchUpInside];
                 UILongPressGestureRecognizer * longPressGesture = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(cellLongPress:)];

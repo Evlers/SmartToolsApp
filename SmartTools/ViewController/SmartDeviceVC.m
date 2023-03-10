@@ -49,7 +49,6 @@
     CGRect bounds; // cell尺寸
 }
 
-//@property (nonatomic, strong) SmartDevice *smart_device;
 @property (nonatomic, strong) UIAlertController *alert;     // 提示窗口
 @property (nonatomic, strong) UITableView *table;           // 功能列表视图
 @property (nonatomic, strong) NSMutableArray *data_point;   // 数据点,嵌套可变数组,第一级为 Table 组
@@ -58,6 +57,7 @@
 @property (nonatomic, strong) NSMutableArray<FileInfo *> *allFileInfo; // App内所有文件信息
 @property (nonatomic, strong) NSMutableArray<FileInfo *> *upgradeFile; // 可用的升级文件
 @property (nonatomic, assign) NSInteger upgrqadeFileSelect; // 升级文件的选择
+@property (nonatomic, assign) uint32_t alertEvents; // 已提醒的事件
 
 @end
 
@@ -70,6 +70,7 @@
     self.upgradeFile = nil;
     cornerRadius = 10.0;
     self.data_point = [NSMutableArray array];
+    self.alertEvents = 0;
     
     // 创建TableView
     self.table = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, 0, 0) style:UITableViewStyleGrouped];
@@ -107,6 +108,7 @@
         [self updateTableView]; // 刷新列表中的数据
     }
     self.title = self.smartDevice.baseInfo.product_info.default_name; // 刷新标题
+    [self batteryEventHandler]; // 检查是否有事件需要上报
 }
 
 - (void)updateTableView {
@@ -213,23 +215,43 @@
     [self renderCornerRadiusLayer:layer withPathRef:pathRef toCell:cell];
 }
 
+// 暂停充电
+- (void)suspendChagring:(UITapGestureRecognizer *)recognizer {
+    if (self.smartDevice.battery.state == SmartBatteryStateCharging) {
+        
+        // 发送开关控制指令到设备
+        bool onOrOff = (self.smartDevice.battery.functioon_switch & SmartBatFunSwSuspendCharging) ? false : true;
+        [self.smartDevice setFunctionSwitch:SmartBatFunSwSuspendCharging isOn:onOrOff];
+        
+        // 先修改设备的功能开关状态
+        if (onOrOff) self.smartDevice.battery.functioon_switch |= SmartBatFunSwSuspendCharging;
+        else self.smartDevice.battery.functioon_switch &= ~SmartBatFunSwSuspendCharging;
+        
+        // 刷新基本信息
+        [UIView performWithoutAnimation:^{ // 无动画
+            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:0];
+            [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新设备基本信息
+        }];
+    }
+}
+
 // 返回每行的数据
 -(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     
     if (indexPath.section == 0) { // 设备基本信息
-        static NSString *identifier = @"DeviceTableViewCell";
+        static NSString *identifier = @"SmartDeviceTableViewCell";
         DeviceTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier]; // 通过队列ID出列Cell
         if (cell == nil) {
             cell = [[DeviceTableViewCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
         }
         
-        SmartBattery *battery = self.smartDevice.battery;
-        
-        uint8_t *dev_id = self.smartDevice.baseInfo.manufacture_data->device_id;
-        uint8_t capacity = self.smartDevice.baseInfo.manufacture_data->capacity_value * 0.5 + 1.5; // 计算电池容量
-        NSString *dev_name = [NSString stringWithFormat:@"%@ %dAH #%02X%02X", self.smartDevice.baseInfo.product_info.default_name, capacity, dev_id[0], dev_id[1]];
-        
-        [cell setDeviceName:dev_name state:self.smartDevice.baseInfo.state info:battery]; // 设置基本信息
+        UITapGestureRecognizer *labelTapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(suspendChagring:)]; // 创建暂停充电的点击手势
+        UITapGestureRecognizer *imageTapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(suspendChagring:)]; // 创建暂停充电的点击手势
+        [cell.statusDescribe addGestureRecognizer:labelTapGestureRecognizer]; // 添加手势到状态描述中
+        [cell.statusIcon addGestureRecognizer:imageTapGestureRecognizer];
+        cell.statusDescribe.userInteractionEnabled = YES; // 启用用户交互
+        cell.statusIcon.userInteractionEnabled = YES;
+        [cell setSmartDeviceInfo:self.smartDevice]; // 设置设备信息
         return cell;
     }
     else
@@ -589,6 +611,36 @@
     self.alertFirmwareUpgrade.title = [NSString stringWithFormat:@"updating... %u%%", (uint32_t)(progress * 100.0)];
 }
 
+// 电池包事件处理
+- (void)batteryEventHandler {
+    NSString *title = @"Warning", *msg;
+    uint32_t events = self.smartDevice.battery.events & SmartBatEvtAllAlert;
+#define setTitleWithMsg(evt, t, m)          if (events & evt) {             \
+                                                self.alertEvents |= evt;    \
+                                                title = t;                  \
+                                                msg = m;                    \
+                                            }
+    
+    setTitleWithMsg(SmartBatEvtShortCircuit, title, @"Battery short circuit !")
+    else setTitleWithMsg(SmartBatEvtOverCurrent, title, @"Battery over current !")
+    else setTitleWithMsg(SmartBatEvtOverLowVolt, title, @"Battery voltage too low !")
+    else setTitleWithMsg(SmartBatEvtOverHighVolt, title, @"Battery voltage too high !")
+    else setTitleWithMsg(SmartBatEvtHighTemp, title, @"Battery temperature is too high !")
+    else setTitleWithMsg(SmartBatEvtLowTemp, title, @"Battery temperature is too low !")
+    else setTitleWithMsg(SmartBatEvtLowerVoltage, title, @"Low electric quantity !")
+    else setTitleWithMsg(SmartBatEvtChargerFull, @"Warm prompt", @"The battery is fully charged")
+    else return ;
+    
+    self.alert = [UIAlertController alertControllerWithTitle:title message:msg preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+        self.alert = nil;
+        if (events & ~self.alertEvents) // 检查是否还有事件
+            [self batteryEventHandler]; // 继续提示
+    }];
+    [self.alert addAction:okAction];
+    [self presentViewController:self.alert animated:YES completion:nil];
+}
+
 // 智能设备数据更新
 - (void)smartDevice:(SmartDevice *)device dataUpdate:(NSDictionary <NSString *, id>*)data; {
     
@@ -619,7 +671,10 @@
                 
                 [self presentViewController:alert animated:YES completion:nil];
             }
+        } else if ([key containsString:@"Battery events"]) {
+            [self batteryEventHandler];
         }
+        
         [self settingCellValue]; // 刷新数据
         [self updateTableView]; // 刷新列表中的数据
     }

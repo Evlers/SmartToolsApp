@@ -31,7 +31,19 @@
 // 电池包功能开关位
 #define SmartBatFunSwHighTempAlarm          0x00000001      // 高温告警开关
 #define SmartBatFunSwLedBlink               0x00000002      // 指示灯闪烁开关
-#define SmaerBatFunSwSuspendCharging        0x00000004      // 暂停充电
+#define SmartBatFunSwSuspendCharging        0x00000004      // 暂停充电
+
+// 电池包事件位
+#define SmartBatEvtToolsConnect             0x00000001      // 工具连接
+#define SmartBatEvtHighTemp                 0x00000002      // 高温保护
+#define SmartBatEvtLowTemp                  0x00000004      // 低温保护
+#define SmartBatEvtShortCircuit             0x00000008      // 短路保护
+#define SmartBatEvtOverCurrent              0x00000010      // 过流保护
+#define SmartBatEvtLowerVoltage             0x00000020      // 欠压保护
+#define SmartBatEvtOverLowVolt              0x00000040      // 过放保护
+#define SmartBatEvtOverHighVolt             0x00000080      // 过充保护
+#define SmartBatEvtChargerFull              0x00000100      // 充满提醒
+#define SmartBatEvtAllAlert                 0x000001FE      // 需要弹窗的事件
 
 // 电池包各参数就绪状态位
 #define SmartBatReadyOfState                0x00000001

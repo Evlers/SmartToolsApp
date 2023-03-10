@@ -24,7 +24,7 @@
 @property (nonatomic, strong) UIImageView *percentIcon;
 
 - (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier;
-- (void)setDeviceName:(NSString *)name state:(SmartDeviceState)state info:(SmartBattery *)battery;
+- (void)setSmartDeviceInfo:(SmartDevice *)smartDevice;
 
 @end
 

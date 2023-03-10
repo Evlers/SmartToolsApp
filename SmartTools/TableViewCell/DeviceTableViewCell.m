@@ -138,27 +138,27 @@
     return self;
 }
 
-- (void)setDeviceName:(NSString *)name state:(SmartDeviceState)state info:(SmartBattery *)battery {
+- (void)setSmartDeviceInfo:(SmartDevice *)smartDevice {
     
-    self.deviceName.text = name;
+    self.deviceName.text = smartDevice.baseInfo.name;
 //    cell.deviceImage.image = [UIImage imageNamed:[NSString stringWithFormat:@"BatPack%d.0", capacity]];
     
-    if (state == SmartDeviceConnectSuccess)
+    if (smartDevice.baseInfo.state == SmartDeviceConnectSuccess)
     {
-        uint32_t term = SmartBatReadyOfTemp|SmartBatReadyOfState|SmartBatReadyOfPercent;
-        if ((battery.paramIsReady & term) != term) { // 如果其中一个数据未准备好
-            [self.connectBtn setTitle:@"Request data.." forState:UIControlStateNormal];
-            return ;
-        }
+//        uint32_t term = SmartBatReadyOfTemp|SmartBatReadyOfState|SmartBatReadyOfPercent;
+//        if ((battery.paramIsReady & term) != term) { // 如果其中一个数据未准备好
+//            [self.connectBtn setTitle:@"Get data.." forState:UIControlStateNormal];
+//            return ;
+//        }
         
         [self.connectBtn setTitle:@"" forState:UIControlStateNormal];
         self.connectBtn.hidden = true;
         self.tempIcon.hidden = self.percentIcon.hidden = self.statusIcon.hidden = false;
         self.bleImage.image = [UIImage imageNamed:@"蓝牙已连接"];
-        self.tempValue.text = [NSString stringWithFormat:@"%d°C", battery.temperature];
-        self.percentValue.text = [NSString stringWithFormat:@"%d%%", battery.percent];
+        self.tempValue.text = [NSString stringWithFormat:@"%d°C", smartDevice.battery.temperature];
+        self.percentValue.text = [NSString stringWithFormat:@"%d%%", smartDevice.battery.percent];
         
-        switch (battery.state)
+        switch (smartDevice.battery.state)
         {
             case SmartBatteryStateStandby:
                 self.statusDescribe.text = @"Standby";
@@ -167,9 +167,15 @@
                 break;
                 
             case SmartBatteryStateCharging:
-                self.statusDescribe.text = @"Charging";
-                self.statusDescribe.textColor = [UIColor colorWithHexString:@"6BD7B0"];
-                self.statusIcon.image = [UIImage imageNamed:@"充电中"];
+                if (smartDevice.battery.functioon_switch & SmartBatFunSwSuspendCharging) {
+                    self.statusDescribe.text = @"SuspendCharging";
+                    self.statusDescribe.textColor = [UIColor colorWithHexString:@"FF9040"];
+                    self.statusIcon.image = [UIImage imageNamed:@"暂停充电"];
+                } else {
+                    self.statusDescribe.text = @"Charging";
+                    self.statusDescribe.textColor = [UIColor colorWithHexString:@"6BD7B0"];
+                    self.statusIcon.image = [UIImage imageNamed:@"充电中"];
+                }
                 break;
                 
             case SmartBatteryStateDischarging:
@@ -191,18 +197,22 @@
         self.tempValue.text = self.percentValue.text = self.statusDescribe.text = @"";
         self.tempIcon.hidden = self.percentIcon.hidden = self.statusIcon.hidden = true;
         self.bleImage.image = [UIImage imageNamed:@"蓝牙已断开"];
-        if (state == SmartDeviceBLEConnecting)
-            [self.connectBtn setTitle:@"Connecting device.." forState:UIControlStateNormal];
-        else if (state == SmartDeviceBLEConnected)
-            [self.connectBtn setTitle:@"Discover srervices.." forState:UIControlStateNormal];
-        else if (state == SmartDeviceBLEDiscoverServer)
-            [self.connectBtn setTitle:@"Discover characteristics.." forState:UIControlStateNormal];
-        else if (state == SmartDeviceBLEDiscoverCharacteristic)
-            [self.connectBtn setTitle:@"Enable nootify.." forState:UIControlStateNormal];
-        else if (state == SmartDeviceBLENotifyEnable)
-            [self.connectBtn setTitle:@"Shaking.." forState:UIControlStateNormal];
-        else
-            [self.connectBtn setTitle:@"Connect device" forState:UIControlStateNormal];
+        if (smartDevice.baseInfo.state == SmartDeviceBLEConnecting)
+            [self.connectBtn setTitle:@"Connecting.." forState:UIControlStateNormal];
+        else if (smartDevice.baseInfo.state == SmartDeviceBLEConnected)
+            [self.connectBtn setTitle:@"Find services.." forState:UIControlStateNormal];
+        else if (smartDevice.baseInfo.state == SmartDeviceBLEDiscoverServer)
+            [self.connectBtn setTitle:@"Find char.." forState:UIControlStateNormal];
+        else if (smartDevice.baseInfo.state == SmartDeviceBLEDiscoverCharacteristic)
+            [self.connectBtn setTitle:@"Enable notify.." forState:UIControlStateNormal];
+        else if (smartDevice.baseInfo.state == SmartDeviceBLENotifyEnable)
+            [self.connectBtn setTitle:@"Handshake.." forState:UIControlStateNormal];
+        else {
+            if (smartDevice.baseInfo.peripheral == nil) // 未搜索到设备广播
+                [self.connectBtn setTitle:@"Offline" forState:UIControlStateNormal];
+            else
+                [self.connectBtn setTitle:@"Connect device" forState:UIControlStateNormal];
+        }
         self.connectBtn.layer.cornerRadius = 10.0; // 设置圆角的弧度
         self.connectBtn.layer.borderWidth = 1.0f; // 边宽
         self.connectBtn.layer.borderColor = [UIColor colorWithHexString:@"FF9040"].CGColor;
