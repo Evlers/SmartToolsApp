@@ -90,6 +90,8 @@
     // 读取所有文件
     NSString *inboxPath = [NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/Inbox/"]]; // 总文件夹
     self.allFileInfo = [FileInfo readAllFileInfoInFolder:inboxPath]; // 读取该文件夹下的所有文件信息
+    
+    [self batteryEventHandler]; // 检查是否有事件需要提示
 }
 
 // 即将进入视图
@@ -108,7 +110,6 @@
         [self updateTableView]; // 刷新列表中的数据
     }
     self.title = self.smartDevice.baseInfo.product_info.default_name; // 刷新标题
-    [self batteryEventHandler]; // 检查是否有事件需要上报
 }
 
 - (void)updateTableView {
