@@ -94,6 +94,7 @@ typedef enum {
     SP_CODE_READ_SHORT_NUM,                 // 上报/读取短路次数
     SP_CODE_READ_OVERCUR_NUM,               // 上报/读取过流次数
     SP_CODE_BATTERY_STATUS,                 // 上报/读取电池包状态
+    SP_CODE_PIN_CODE,                       // 设置/验证PIN代码
 
     // Firmware Upgrade interface
     SP_CODE_UPGRADE_REQUEST = 0x50,         // 升级请求

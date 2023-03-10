@@ -17,6 +17,7 @@
 
 @interface ProductInfo : NSObject
 
+@property (nonatomic, strong) NSString *identity;           // 产品ID
 @property (nonatomic, strong) NSString *default_name;       // 产品默认名称
 @property (nonatomic, strong) NSString *image;              // 产品图片
 @property (nonatomic, assign) SmartDeviceProductType type;  // 产品类型
@@ -37,7 +38,6 @@
 #define SmartBatReadyOfTemp                 0x00000002
 #define SmartBatReadyOfPercent              0x00000004
 #define SmartBatReadyOfCurCur               0x00000008
-#define SmartBatReadyOfDateofManu           0x00000010
 #define SmartBatReadyOfProtectVolt          0x00000020
 #define SmartBatReadyOfMaxDischargingCur    0x00000040
 #define SmartBatReadyOfFunSw                0x00000080
@@ -77,7 +77,6 @@ typedef NS_ENUM(uint8_t, SmartBatteryState)
 @property (nonatomic, assign) int16_t temperature;                  // 电池包当前温度 单位：摄氏度
 @property (nonatomic, assign) uint8_t percent;                      // 电池当前电量 单位：%
 @property (nonatomic, assign) float currentCurrent;                 // 当前电流 单位：A
-@property (nonatomic, strong) NSDate *dateOfManufacture;            // 生产日期
 @property (nonatomic, assign) float protectVoltage;                 // 保护电压 单位:V
 @property (nonatomic, assign) float maxDischargingCurrent;          // 最大放电电流 单位：A
 @property (nonatomic, assign) uint32_t functioon_switch;            // 功能开关
@@ -97,6 +96,7 @@ typedef NS_ENUM(uint8_t, SmartBatteryState)
 
 @interface DeviceBaseInfo : NSObject
 
+@property (nonatomic, strong) NSString *name;                       // 设备名称
 @property (nonatomic, assign) SmartDeviceState state;               // 设备状态
 @property (nonatomic, strong) ProductInfo *product_info;            // 产品信息
 @property (nonatomic, strong) CBPeripheral *peripheral;             // 蓝牙外围设备
@@ -105,7 +105,9 @@ typedef NS_ENUM(uint8_t, SmartBatteryState)
 @property (nonatomic, strong) NSString *boot_firmware_version;      // 设备Bootloader固件版本号
 @property (nonatomic, strong) NSString *app_firmware_version;       // 设备Application固件版本号
 @property (nonatomic, strong) NSString *uuid;                       // 设备唯一标识(UUID)
+@property (nonatomic, strong) NSString *BLEUUID;                    // 蓝牙唯一标识(用于储存设备的蓝牙)
 @property (nonatomic, strong) NSString *chipID;                     // 芯片ID
+@property (nonatomic, strong) NSDate *dateOfProduction;             // 生产日期
 
 @end
 
@@ -135,8 +137,14 @@ typedef NS_ENUM(uint8_t, SmartBatteryState)
 // 查询设备所有数据
 - (void)getDeviceAllData;
 
+// 查询电池电压
+- (void)getBatteryVoltage;
+
 // 设置功能开关
 - (void)setFunctionSwitch:(uint32_t)sw isOn:(bool)on;
+
+// 发送 PIN Code
+- (void)sendPinCode:(NSInteger)pin_code;
 
 // 开始固件升级
 - (bool)startFirmwareUpgrade:(NSString *)filePath;

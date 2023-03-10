@@ -14,6 +14,8 @@
 #import "SSZipArchive.h"
 #import "Masonry.h"
 #import "DeviceTableViewCell.h"
+#import "DeviceInfoVC.h"
+#import "DeviceStatisticsVC.h"
 
 @implementation DataPoint
 
@@ -41,7 +43,7 @@
 @end
 
 
-@interface SmartDeviceVC () <UITableViewDelegate, UITableViewDataSource, SmartDeviceDelegate>
+@interface SmartDeviceVC () <UITableViewDelegate, UITableViewDataSource, UITextFieldDelegate, SmartDeviceDelegate>
 {
     CGFloat cornerRadius; // cell圆角
     CGRect bounds; // cell尺寸
@@ -97,10 +99,32 @@
     if (self.smartDevice.baseInfo.peripheral.state != CBPeripheralStateConnected) { // 如果未连接蓝牙
         self.alert = [UIAlertController alertControllerWithTitle:@"Cconnecting" message:@"Connecting device.." preferredStyle:UIAlertControllerStyleAlert];
         [self presentViewController:self.alert animated:YES completion:nil]; // 显示提示窗口
-    } else
-        [self.smartDevice getDeviceAllData]; // 查询所有设备信息
-    
+    } else {
+        [self searchUpgradeFile]; // 搜索可用的升级文件
+        UITableViewCellAccessoryType type = (self.upgradeFile == nil || self.upgradeFile.count == 0) ?
+                                            UITableViewCellAccessoryNone : UITableViewCellAccessoryDisclosureIndicator;
+        [self set_data_poinit:@"Firmware version" value:self.smartDevice.baseInfo.app_firmware_version type:type]; // 设置固件版本Cell
+        [self updateTableView]; // 刷新列表中的数据
+    }
     self.title = self.smartDevice.baseInfo.product_info.default_name; // 刷新标题
+}
+
+- (void)updateTableView {
+    // 刷新设备基本信息
+    [UIView performWithoutAnimation:^{ // 无动画
+        NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:0];
+        [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新设备基本信息
+    }];
+    
+    // 刷新列表中的数据
+    for (int section = 0; section < self.data_point.count; section ++) {
+        for (int row = 0; row < ((NSMutableArray *)[self.data_point objectAtIndex:section]).count; row ++) {
+            [UIView performWithoutAnimation:^{ // 无动画
+                NSIndexPath *i = [NSIndexPath indexPathForRow:row inSection:section + 1];
+                [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:i] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
+            }];
+        }
+    }
 }
 
 #pragma mark -- TableView 接口
@@ -111,6 +135,7 @@
     [setting addObject:[[DataPoint alloc]initWithName:@"Anti-theft lock"]];
     [setting addObject:[[DataPoint alloc]initWithName:@"Protection voltage"]];
     [setting addObject:[[DataPoint alloc]initWithName:@"Maximum discharge current"]];
+    [setting addObject:[[DataPoint alloc]initWithName:@"Current current"]];
     [self.data_point addObject:setting];
     [self.table insertSections:[NSIndexSet indexSetWithIndex:self.data_point.count] withRowAnimation:UITableViewRowAnimationNone]; // 插入数据
     
@@ -139,6 +164,8 @@
                 dataPiont.value = [NSString stringWithFormat:@"%0.2fv", self.smartDevice.battery.protectVoltage];
             else if ([dataPiont.name isEqualToString:@"Maximum discharge current"])
                 dataPiont.value = [NSString stringWithFormat:@"%.0fA", self.smartDevice.battery.maxDischargingCurrent];
+            else if ([dataPiont.name isEqualToString:@"Current current"])
+                dataPiont.value = [NSString stringWithFormat:@"%.0fA", self.smartDevice.battery.currentCurrent];
             else if ([dataPiont.name isEqualToString:@"High temperature alarm switch"])
                 dataPiont.value = (self.smartDevice.battery.functioon_switch & SmartBatFunSwHighTempAlarm) ? @"true" : @"False";
             else if ([dataPiont.name isEqualToString:@"Indicator light flashes"])
@@ -163,6 +190,7 @@
 
 // 组头高度
 -(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
+    if (section == 0) return 30;
     return 1;
 }
 
@@ -175,16 +203,6 @@
 - (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath {
     // 0.cell背景透明，否则不会出现圆角效果
     cell.backgroundColor = [UIColor clearColor];
-
-    // 原因如下：
-    // 之所以设置为透明，是因为cell背景色backGroundColor是直接设置在UITableViewCell上面的，位于cell的第四层
-    // backGroundView是在UITableViewCell之上的，也就是位于cell的第三层
-    // 我们所要做的操作是在backGroundView上，也就是第三层
-    // 第三层会挡住第四层，如果第四层设置了颜色，那么将来cell的圆角部分会露出第四层的颜色，也就是背景色
-    // 所以，必须设置cell的背景色为透明色！
-    // 另外:
-    // 第二层是UITableViewCellContentView，默认就是透明的，无需设置
-    // 第一层是UITableViewLabel，也就是cell.textLabel
 
     // 1.创建path,保存绘制的路径
     CGMutablePathRef pathRef = CGPathCreateMutable();
@@ -268,6 +286,16 @@
         if ( self.allFileInfo.count && [data_point.name containsString:@"Firmware version"]) {
             self.upgrqadeFileSelect = 0; // 先选择第一个升级文件(根据读取文件的方法，第一个是旧的文件)
             [self promptUpdateInformation]; // 提示更新信息
+        } else if ([data_point.name containsString:@"Anti-theft lock"]) {
+            [self promptEnterPinCode]; // 输入Pin Code
+        } else if ([data_point.name containsString:@"Information"]) {
+            DeviceInfoVC *deviceInfoVC = [[DeviceInfoVC alloc]init];
+            deviceInfoVC.smartDevice = self.smartDevice;
+            [self.navigationController pushViewController:deviceInfoVC animated:YES];
+        } else if ([data_point.name containsString:@"Statistics"]) {
+            DeviceStatisticsVC *deviceStatisticsVC = [[DeviceStatisticsVC alloc]init];
+            deviceStatisticsVC.smartDevice = self.smartDevice;
+            [self.navigationController pushViewController:deviceStatisticsVC animated:YES];
         }
     }
     [self.table deselectRowAtIndexPath:self.table.indexPathForSelectedRow animated:YES]; // 取消选中
@@ -373,14 +401,33 @@
     cell.backgroundView = backView;
 }
 
-#pragma mark -- Smart device interface
+#pragma mark -- Smart device function
 
-- (void) functionSwitchChange:(UISwitch *)sw {
+// 功能开关回调
+- (void)functionSwitchChange:(UISwitch *)sw {
     switch (sw.tag)
     {
         case 0: [self.smartDevice setFunctionSwitch:SmartBatFunSwHighTempAlarm isOn:sw.isOn]; break; //  高温告警
         case 1: [self.smartDevice setFunctionSwitch:SmartBatFunSwLedBlink isOn:sw.isOn]; break; // 指示灯闪烁
     }
+}
+
+// 弹窗输入Pin Code
+- (void)promptEnterPinCode {
+    
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Please enter PIN Code" message:nil preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
+        textField.placeholder = @"four-digit PIN Code";
+        textField.keyboardType = UIKeyboardTypeASCIICapableNumberPad; // 使用数字键盘
+        textField.delegate = self;
+    }];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        UITextField *textField = alert.textFields.firstObject; // 获取第一个输入框
+        [self.smartDevice sendPinCode:[textField.text intValue]]; // 发送密码到设备
+    }]];
+    
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 // 提示更新信息
@@ -446,9 +493,13 @@
     self.alertFirmwareUpgrade = [UIAlertController alertControllerWithTitle:@"updating..." message:nil preferredStyle:UIAlertControllerStyleAlert];
     
     self.upgradeProgress = [[UIProgressView alloc]initWithProgressViewStyle:UIProgressViewStyleBar];
-    [self.upgradeProgress setFrame:CGRectMake(15, 50, 235, 10)];
     self.upgradeProgress.progress = 0;
     [self.alertFirmwareUpgrade.view addSubview:self.upgradeProgress];
+    [self.upgradeProgress mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.equalTo(self.alertFirmwareUpgrade.view.mas_left).offset(10);
+        make.right.equalTo(self.alertFirmwareUpgrade.view.mas_right).offset(-10);
+        make.bottom.equalTo(self.alertFirmwareUpgrade.view.mas_bottom).offset(-10);
+    }];
     
     if ([self.smartDevice startFirmwareUpgrade:self.upgradeFile[self.upgrqadeFileSelect].path] == false) {// 开始升级智能设备
         return ;
@@ -457,8 +508,25 @@
     [self presentViewController:self.alertFirmwareUpgrade animated:YES completion:nil]; // 显示升级提示框
 }
 
+// 搜索当前连接的智能设备可用的升级文件
+- (void)searchUpgradeFile {
+    
+    if (self.smartDevice.baseInfo.hardware_version == nil) return ; // 硬件版本号是否已就绪
+    if (self.smartDevice.baseInfo.app_firmware_version == nil) return ; // 固件版本号是否已就绪
+    
+    NSData *device_pid = [NSData dataWithBytes:self.smartDevice.baseInfo.manufacture_data->product_id length:sizeof(self.smartDevice.baseInfo.manufacture_data->product_id)];
+    NSDictionary<NSString *, id> *filtration = @{@"product id": device_pid,
+                                                 @"hardware version": self.smartDevice.baseInfo.hardware_version,
+                                                 @"bootloader firmware version": self.smartDevice.baseInfo.boot_firmware_version,
+                                                 @"application firmware version": self.smartDevice.baseInfo.app_firmware_version
+    };
+    self.upgradeFile = [Firmware getAvaliableFirmwareInAllFile:self.allFileInfo filtration:filtration]; // 通过筛选项获取当前连接设备可用的固件
+}
+
+#pragma mark -- Smart device interface
+
 // 设备固件升级状态更新
-- (void)smartDeviceUpgradeStateUpdate:(SmartDeviceUpgradeState)state withResult:(uint8_t)result {
+- (void)smartDevice:(SmartDevice *)device upgradeStateUpdate:(SmartDeviceUpgradeState)state withResult:(uint8_t)result {
     if (result != 0) { // 升级错误
         NSString *message;
         switch (state)
@@ -521,21 +589,6 @@
     self.alertFirmwareUpgrade.title = [NSString stringWithFormat:@"updating... %u%%", (uint32_t)(progress * 100.0)];
 }
 
-// 搜索当前连接的智能设备可用的升级文件
-- (void)searchUpgradeFile {
-    
-    if (self.smartDevice.baseInfo.hardware_version == nil) return ; // 硬件版本号是否已就绪
-    if (self.smartDevice.baseInfo.app_firmware_version == nil) return ; // 固件版本号是否已就绪
-    
-    NSData *device_pid = [NSData dataWithBytes:self.smartDevice.baseInfo.manufacture_data->product_id length:sizeof(self.smartDevice.baseInfo.manufacture_data->product_id)];
-    NSDictionary<NSString *, id> *filtration = @{@"product id": device_pid,
-                                                 @"hardware version": self.smartDevice.baseInfo.hardware_version,
-                                                 @"bootloader firmware version": self.smartDevice.baseInfo.boot_firmware_version,
-                                                 @"application firmware version": self.smartDevice.baseInfo.app_firmware_version
-    };
-    self.upgradeFile = [Firmware getAvaliableFirmwareInAllFile:self.allFileInfo filtration:filtration]; // 通过筛选项获取当前连接设备可用的固件
-}
-
 // 智能设备数据更新
 - (void)smartDevice:(SmartDevice *)device dataUpdate:(NSDictionary <NSString *, id>*)data; {
     
@@ -545,9 +598,7 @@
             
         } else if ([key containsString:@"Firmware version"]) { // 固件版本
             NSArray *version_info = data[key];
-//            NSString *boot_version = version_info[0];
             NSString *app_version = version_info[1];
-//            NSLog(@"Smart device bootloader version: %@", boot_version);
             
             [self searchUpgradeFile]; // 搜索可用的升级文件
             UITableViewCellAccessoryType type = (self.upgradeFile == nil || self.upgradeFile.count == 0) ? UITableViewCellAccessoryNone : UITableViewCellAccessoryDisclosureIndicator;
@@ -557,23 +608,20 @@
             [self searchUpgradeFile]; // 搜索可用的升级文件
             UITableViewCellAccessoryType type = (self.upgradeFile == nil || self.upgradeFile.count == 0) ? UITableViewCellAccessoryNone : UITableViewCellAccessoryDisclosureIndicator;
             [self set_data_poinit:@"Firmware version" value:self.smartDevice.baseInfo.app_firmware_version type:type]; // 设置固件版本Cell
-        }
-        
-        // 刷新设备基本信息
-        [UIView performWithoutAnimation:^{ // 无动画
-            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:0];
-            [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新设备基本信息
-        }];
-        
-        // 刷新列表中的数据
-        for (int section = 0; section < self.data_point.count; section ++) {
-            for (int row = 0; row < ((NSMutableArray *)[self.data_point objectAtIndex:section]).count; row ++) {
-                [UIView performWithoutAnimation:^{ // 无动画
-                    NSIndexPath *i = [NSIndexPath indexPathForRow:row inSection:section + 1];
-                    [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:i] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
-                }];
+            
+        } else if ([key containsString:@"PIN Code"]) { // 验证PIN Code
+            NSString *result = data[key];
+            if ([result containsString:@"failed"]) {
+                UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"PIN Code error" message:@"Please enter the correct password!" preferredStyle:UIAlertControllerStyleAlert];
+                [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+                    [self promptEnterPinCode]; // 再次输入密码
+                }]];
+                
+                [self presentViewController:alert animated:YES completion:nil];
             }
         }
+        [self settingCellValue]; // 刷新数据
+        [self updateTableView]; // 刷新列表中的数据
     }
 }
 

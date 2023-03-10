@@ -24,8 +24,7 @@
 @property (nonatomic, strong) NSMutableArray<SmartDevice *> *smartDevice;
 @property (nonatomic, strong) UIActivityIndicatorView *indicatorView;
 @property (nonatomic, strong) UILabel *placeholder;
-
-@property (nonatomic, strong) SmartDeviceVC *device_view;
+@property (nonatomic, strong) NSArray<NSDictionary<NSString *, NSString *> *> *myDevice;
 
 @end
 
@@ -33,28 +32,59 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    
     // Do any additional setup after loading the view.
-    UITabBarItem *tabBarItem = [[UITabBarItem alloc]initWithTitle:@"Home" image:nil tag:101];
-    tabBarItem.image = [[UIImage imageNamed:@"home40x40"] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
-    tabBarItem.selectedImage = tabBarItem.image;
-    self.tabBarItem = tabBarItem;
-    self.view.backgroundColor = [UIColor colorWithWhite:0.95 alpha:1];
+    self.smartDevice = [NSMutableArray array]; // 创建智能设备数组
+    self.centralManager = [[CBCentralManager alloc]initWithDelegate:self queue:dispatch_get_main_queue()]; // 创建中心管理者
     
     // 初始化产品信息
     ProductInfo *product_info = [ProductInfo alloc];
     product_info.default_name = @"Smart Battery";
     product_info.image = nil;
     product_info.type = SmartDeviceProductTypeBattery;
-    self.productInfo = @{@"11223344": product_info};
+    product_info.identity = @"11223344";
+    self.productInfo = @{product_info.identity: product_info};
     
-//    NSLog(@"productInfo: %@", self.productInfo);
+    // 装载已储存的设备
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    self.myDevice = [defaults valueForKey:@"MyDevice"];
+    for (NSDictionary *dev in self.myDevice) {
+        DeviceBaseInfo *baseInfo = [[DeviceBaseInfo alloc]init];
+        baseInfo.product_info = self.productInfo[dev[@"pid"]];
+        baseInfo.name = dev[@"name"];
+        baseInfo.BLEUUID = dev[@"uuid"];
+        SmartDevice *smartDevice = [[SmartDevice alloc]init]; // 创建智能设备
+        smartDevice.baseInfo = baseInfo; // 复制设备基本信息
+        [self.smartDevice addObject:smartDevice]; // 添加该设备到数组
+    }
     
-    self.smartDevice = [NSMutableArray array];
+    // 配置导航栏信息
+    UITabBarItem *tabBarItem = [[UITabBarItem alloc]initWithTitle:@"Home" image:nil tag:101];
+    tabBarItem.image = [[UIImage imageNamed:@"home60x60"] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+    tabBarItem.selectedImage = tabBarItem.image;
+    self.tabBarItem = tabBarItem;
     
-    // 初始化cell的圆角半径
-    cornerRadius = 10.0;
+    // 配置背景
+    self.view.backgroundColor = [UIColor colorWithWhite:0.95 alpha:1];
+//    self.view.backgroundColor = [UIColor colorWithPatternImage:[UIImage imageNamed:@"背景"]];
+//    CAGradientLayer *gradientLayer = [[CAGradientLayer alloc] init]; // 初始化梯度图层
+//    gradientLayer.colors = @[(__bridge id)[UIColor colorWithHexString:@"E9322D"].CGColor, // 设置梯度变化颜色数组
+//                             (__bridge id)[UIColor colorWithWhite:0.95 alpha:1].CGColor,
+//                             (__bridge id)[UIColor colorWithHexString:@"FF9040"].CGColor,
+//                             (__bridge id)[UIColor colorWithWhite:0.9 alpha:1].CGColor,
+//                             (__bridge id)[UIColor colorWithWhite:0.7 alpha:1].CGColor,
+//                             (__bridge id)[UIColor colorWithWhite:0.7 alpha:1].CGColor,
+//                             (__bridge id)[UIColor colorWithWhite:0.7 alpha:1].CGColor,
+//                             (__bridge id)[UIColor colorWithWhite:0.7 alpha:1].CGColor,
+//                             (__bridge id)[UIColor colorWithWhite:0.7 alpha:1].CGColor];
+//    gradientLayer.startPoint = CGPointMake(0, 0); // 设置开始点
+//    gradientLayer.endPoint = CGPointMake(1, 1); // 设置结束点
+//    gradientLayer.frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height); // 设置图层大小
+//    [self.view.layer addSublayer:gradientLayer]; // 添加涂层
+    
     // 配置 TableView
-    self.table = [[UITableView alloc]init];
+    cornerRadius = 10.0; // 初始化cell的圆角半径
+    self.table = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, 0, 0) style:UITableViewStyleGrouped];
     self.table.delegate = self;              // 设置代理
     self.table.dataSource = self;            // 设置数据源
     self.table.estimatedRowHeight = UITableViewAutomaticDimension;
@@ -65,20 +95,6 @@
         make.edges.equalTo(self.view);
     }];
     
-    // 配置TableView占位符
-    self.placeholder = [[UILabel alloc]init];
-    self.placeholder.text = @"No device found";
-    self.placeholder.numberOfLines = 3;
-    self.placeholder.font = [UIFont  boldSystemFontOfSize:30.0];
-    self.placeholder.textColor = [UIColor lightGrayColor];
-    self.placeholder.textAlignment = NSTextAlignmentCenter;
-    [self.table addSubview:self.placeholder];
-    
-    [self.placeholder mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.centerX.equalTo(self.view.mas_centerX);
-        make.centerY.equalTo(self.view.mas_centerY);
-    }];
-    
     // 配置下拉刷新的控件
     UIRefreshControl *RefreshControl = [[UIRefreshControl alloc]init];
     RefreshControl.backgroundColor = [UIColor clearColor];
@@ -86,7 +102,21 @@
     [RefreshControl addTarget:self action:@selector(DownPullUpdate:) forControlEvents:UIControlEventValueChanged];
     self.table.refreshControl = RefreshControl;
     
-    self.centralManager = [[CBCentralManager alloc]initWithDelegate:self queue:dispatch_get_main_queue()]; // 创建中心管理者
+    // 配置TableView占位符
+    if (self.myDevice.count == 0) {
+        self.placeholder = [[UILabel alloc]init];
+        self.placeholder.text = @"No device found";
+        self.placeholder.numberOfLines = 3;
+        self.placeholder.font = [UIFont  boldSystemFontOfSize:30.0];
+        self.placeholder.textColor = [UIColor lightGrayColor];
+        self.placeholder.textAlignment = NSTextAlignmentCenter;
+        [self.table addSubview:self.placeholder];
+        
+        [self.placeholder mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.centerX.equalTo(self.view.mas_centerX);
+            make.centerY.equalTo(self.view.mas_centerY);
+        }];
+    }
 }
 
 // 下拉更新回调
@@ -94,22 +124,22 @@
     if (self.centralManager.state == CBManagerStatePoweredOn) {
         [self.centralManager stopScan]; // 停止扫描
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 500 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
-            while (self.smartDevice.count) { // 删除所有搜索到的设备
-                NSIndexSet *indexSet = [NSIndexSet indexSetWithIndex:self.smartDevice.count - 1];
-                if ([self.smartDevice lastObject].baseInfo.peripheral.state != CBPeripheralStateDisconnected) {
-                    [self.smartDevice lastObject].delegate = nil;
-                    [[self.smartDevice lastObject] disconnectToDevice];
-                }
+            
+            while (self.smartDevice.count > self.myDevice.count) { // 删除所有搜索到的设备
+                NSIndexPath *indexPath = [NSIndexPath indexPathForRow:self.smartDevice.count - self.myDevice.count - 1 inSection:self.myDevice.count];
+                [self.smartDevice lastObject].delegate = nil;
+                [[self.smartDevice lastObject] disconnectToDevice];
                 [self.smartDevice removeObjectAtIndex:self.smartDevice.count-1]; // 删除一个设备
-                [self.table deleteSections:indexSet withRowAnimation:UITableViewRowAnimationRight];
+                [self.table deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationRight];
+                if ([self.smartDevice lastObject].baseInfo.BLEUUID != nil) break;
             }
             
-            [refc endRefreshing];//停止更新
+            [refc endRefreshing]; // 停止更新
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 100 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
                 [self.centralManager scanForPeripheralsWithServices:nil options:nil]; // 搜索周围所有蓝牙设备
                 
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1000 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{ // 1秒后如果没搜索到设备则显示占位符
-                    if (self.smartDevice.count == 0)
+                    if (self.smartDevice.count == 0 && self.myDevice.count == 0)
                         self.placeholder.hidden = false; // 显示占位符
                 });
             });
@@ -141,7 +171,9 @@
 // 连接按钮单击
 - (void)connectButtonClicked:(UIButton *)btn {
     
-    if ([self.smartDevice objectAtIndex:btn.tag].baseInfo.state != SmartDeviceBLEDisconnected) return;
+    SmartDevice *smartDevice = [self.smartDevice objectAtIndex:btn.tag];
+    if (smartDevice.baseInfo.BLEUUID && smartDevice.baseInfo.peripheral == nil) return ; // 已储存设备未搜索到广播不允许连接
+    if (smartDevice.baseInfo.peripheral.state != CBPeripheralStateDisconnected) return;
     
     [self.smartDevice objectAtIndex:btn.tag].delegate = self; // 代理智能设备接口
     [[self.smartDevice objectAtIndex:btn.tag] connectToDevice]; // 连接到设备
@@ -151,29 +183,38 @@
 
 // Tableview接口: 返回组头数据
 -(NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
-//    return @"Nearby equipment";
-    if (section == 0)
-        return @"My device";
+    
+    if (section == self.myDevice.count)
+        return @"Nearby equipment";
+    else if (section == 0)
+        return @"MyDevice";
     return @" ";
 }
 
 // 返回组数量
 -(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-    if (self.smartDevice.count) {
+    if (self.smartDevice.count && self.placeholder != nil) {
         self.placeholder.hidden = true; // 隐藏占位符
     }
-    return self.smartDevice.count;
+    if (self.myDevice.count == 0 && self.smartDevice.count == 0)
+        return 1; // 至少有一个组 用于插入搜索到的设备
+    return self.myDevice.count + (self.smartDevice.count ? 1 : 0);
 }
 
 // 组头高度
 -(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
     if (section == 0) return 60;
+    else if (section == self.myDevice.count) return 30;
     return 1;
 }
 
 // Tableview接口: 返回行数
 -(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return 1;
+    if (section >= self.myDevice.count) { // 附近设备
+        return self.smartDevice.count - self.myDevice.count;
+    } else { // 保存的设备组
+        return 1;
+    }
 }
 
 // TableView接口：即将显示Cell
@@ -210,37 +251,164 @@
     {
         case SmartDeviceProductTypeBattery: // 电池包设备
         {
-            DeviceTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"DeviceTableViewCell"]; // 通过队列ID出列Cell
-            if (cell == nil) {
-                cell = [[DeviceTableViewCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"DeviceTableViewCell"];
+            if (indexPath.section == self.myDevice.count) // 附近设备
+            {
+                DevParamUITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"device base SystemCell"]; // 通过队列ID出列Cell
+                if (cell == nil) {
+                    cell = [[DevParamUITableViewCell alloc]initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:@"SystemCell"];
+                    cell.accessoryType = UITableViewCellAccessoryNone;
+                }
+                
+                DeviceBaseInfo *baseInfo = [self.smartDevice objectAtIndex:indexPath.section + indexPath.row].baseInfo;
+                uint8_t *dev_id = baseInfo.manufacture_data->device_id;
+                uint8_t capacity = baseInfo.manufacture_data->capacity_value * 0.5 + 1.5; // 计算电池容量
+                
+                cell.textLabel.text = [NSString stringWithFormat:@"%@ %uAH", baseInfo.product_info.default_name, capacity];
+                cell.detailTextLabel.text = [NSString stringWithFormat:@"#%02X%02X", dev_id[0], dev_id[1]];
+                return cell;
             }
-            
-            SmartBattery *battery = [self.smartDevice objectAtIndex:indexPath.section].battery;
-            
-            uint8_t *dev_id = baseInfo.manufacture_data->device_id;
-            uint8_t capacity = baseInfo.manufacture_data->capacity_value * 0.5 + 1.5; // 计算电池容量
-            NSString *dev_name = [NSString stringWithFormat:@"%@ %dAH #%02X%02X", baseInfo.product_info.default_name, capacity, dev_id[0], dev_id[1]];
-            
-            [cell setDeviceName:dev_name state:baseInfo.state info:battery]; // 设置基本信息
-            cell.connectBtn.tag = indexPath.section; // 记录按钮位置
-            [cell.connectBtn addTarget:self action:@selector(connectButtonClicked:) forControlEvents:UIControlEventTouchUpInside];
-            
-            return cell;
+            else // 已储存设备(我的设备)
+            {
+                DeviceTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"DeviceTableViewCell"]; // 通过队列ID出列Cell
+                if (cell == nil) {
+                    cell = [[DeviceTableViewCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"DeviceTableViewCell"];
+                }
+                
+                SmartBattery *battery = [self.smartDevice objectAtIndex:indexPath.section].battery;
+                
+                [cell setDeviceName:baseInfo.name state:baseInfo.state info:battery]; // 设置基本信息
+                cell.connectBtn.tag = indexPath.section; // 记录按钮位置
+                [cell.connectBtn addTarget:self action:@selector(connectButtonClicked:) forControlEvents:UIControlEventTouchUpInside];
+                UILongPressGestureRecognizer * longPressGesture = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(cellLongPress:)];
+                [cell addGestureRecognizer:longPressGesture];
+                return cell;
+            }
         }
         
         default: return nil;
     }
 }
 
+// 长按"我的设备"
+- (void)cellLongPress:(UIGestureRecognizer *)recognizer {
+    if (recognizer.state == UIGestureRecognizerStateBegan) {
+        CGPoint location = [recognizer locationInView:self.table]; // 获取点击的坐标
+        NSIndexPath *indexPath = [self.table indexPathForRowAtPoint:location]; // 通过坐标获取选中的indexPath
+        SmartDevice *smartDevice = [self.smartDevice objectAtIndex:indexPath.section]; // 获取选中的设备
+        
+        NSString *msg = [NSString stringWithFormat:@"Whether to delete the %@ device?", smartDevice.baseInfo.name];
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Delete device" message:msg preferredStyle:UIAlertControllerStyleActionSheet];
+        UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
+        UIAlertAction *yesAction = [UIAlertAction actionWithTitle:@"Yes" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            
+            // 断开需要删除的设备连接
+            if (smartDevice.baseInfo.peripheral.state == CBPeripheralStateConnected) {
+                smartDevice.delegate = nil; // 取消该设备的代理
+                [smartDevice disconnectToDevice]; // 断开设备连接
+                [self.centralManager stopScan]; // 停止蓝牙扫描
+                [self.centralManager scanForPeripheralsWithServices:nil options:nil];// 设备断开后需要重新扫描才能在附近设备中显示
+            }
+            
+            // 从"我的设备"中删除次设备
+            NSDictionary *storeInfo = @{
+                @"uuid" : smartDevice.baseInfo.BLEUUID,
+                @"name" : smartDevice.baseInfo.name,
+                @"pid" : smartDevice.baseInfo.product_info.identity
+            };
+            NSMutableArray *myDevice = [NSMutableArray arrayWithArray:self.myDevice]; // 先获取储存的数组到可变数组中
+            [myDevice removeObject:storeInfo]; // 从可变数组中删除此设备
+            self.myDevice = [myDevice copy]; // 复制新的储存信息
+            
+            // 保存"我的设备"数据信息
+            NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+            [defaults setObject:self.myDevice forKey:@"MyDevice"];
+            [defaults synchronize]; // 立即同步写入
+            
+            NSIndexSet *indexSet = [NSIndexSet indexSetWithIndex:[self.smartDevice indexOfObject:smartDevice]]; // 获取该设备在TableView中的位置
+            [self.smartDevice removeObject:smartDevice]; // 从数组中删除设备
+            [self.table deleteSections:indexSet withRowAnimation:UITableViewRowAnimationRight]; // 从Tableview移除该组
+        }];
+        [alert addAction:cancelAction];
+        [alert addAction:yesAction];
+        [self presentViewController:alert animated:YES completion:nil];
+    }
+}
+
 // Tableview接口:选中设备
 -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     
-    SmartDevice *smartDevice = [self.smartDevice objectAtIndex:indexPath.section];
-    self.device_view = [[SmartDeviceVC alloc]init];
-    self.device_view.smartDevice = [self.smartDevice objectAtIndex:indexPath.section]; // 传递设备信息到设备窗口
-    if (smartDevice.baseInfo.state == SmartDeviceBLEDisconnected)
-        [smartDevice connectToDevice]; // 连接到设备
-    [self.navigationController pushViewController:self.device_view animated:YES]; // 跳转到设备窗口
+    NSInteger index = (indexPath.section == self.myDevice.count) ? (self.myDevice.count + indexPath.row) : indexPath.section;
+    SmartDevice *smartDevice = [self.smartDevice objectAtIndex:index];
+    
+    if (smartDevice.baseInfo.state == SmartDeviceBLEDisconnected) {
+        
+        if (smartDevice.baseInfo.BLEUUID == nil) // 未储存的设备
+        {
+            // 删除即将连接的附近设备
+            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:[self.smartDevice indexOfObject:smartDevice] - self.myDevice.count inSection:self.myDevice.count];
+            [self.smartDevice removeObject:smartDevice]; // 从附近设备中删除该设备
+            [self.table deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationRight];
+            
+            [self.centralManager stopScan]; // 停止蓝牙扫描
+            // 等待附近设备删除动画完成后再插入新的绑定设备 并执行扫描连接
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 400 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
+                
+                // 备份以及删除所有的附近设备
+                NSMutableArray *backup = [NSMutableArray array];
+                while(self.smartDevice.count > self.myDevice.count) {
+                    [backup addObject:[self.smartDevice lastObject]]; // 备份
+                    [self.smartDevice removeLastObject]; // 删除
+                }
+                
+                // 储存该设备
+                NSDictionary *storeInfo = @{ // 创建储存信息
+                    @"uuid" : smartDevice.baseInfo.peripheral.identifier.UUIDString,
+                    @"name" : smartDevice.baseInfo.name,
+                    @"pid" : smartDevice.baseInfo.product_info.identity
+                };
+                smartDevice.baseInfo.BLEUUID = smartDevice.baseInfo.peripheral.identifier.UUIDString; // 转为已储存的设备
+                NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+                if (self.myDevice == nil) {
+                    self.myDevice = [NSArray arrayWithObject:storeInfo];
+                } else {
+                    self.myDevice = [self.myDevice arrayByAddingObject:storeInfo];
+                }
+                [defaults setObject:self.myDevice forKey:@"MyDevice"];
+                [defaults synchronize]; // 强制储存
+                
+                // 装载刚刚储存的设备到数组中准备执行连接
+                DeviceBaseInfo *baseInfo = [[DeviceBaseInfo alloc]init];
+                baseInfo.product_info = self.productInfo[storeInfo[@"pid"]];
+                baseInfo.name = storeInfo[@"name"];
+                baseInfo.BLEUUID = storeInfo[@"uuid"];
+                SmartDevice *smartDevice = [[SmartDevice alloc]init]; // 创建智能设备
+                smartDevice.baseInfo = baseInfo; // 复制设备基本信息
+                [self.smartDevice addObject:smartDevice]; // 添加该设备到数组
+            
+                // 恢复附近的设备
+                while(backup.count) {
+                    [self.smartDevice addObject:[backup lastObject]];
+                    [backup removeLastObject];
+                }
+                
+                NSIndexSet *indexSet = [NSIndexSet indexSetWithIndex:[self.smartDevice indexOfObject:smartDevice]];
+                [self.table insertSections:indexSet withRowAnimation:UITableViewRowAnimationLeft]; // 插入新的组
+                [self.centralManager scanForPeripheralsWithServices:nil options:nil]; // 扫描新加入的设备广播后执行连接
+            });
+            
+            return ; // 加入到"我的设备中不需要进入"详情页面"
+        }
+        else if (smartDevice.baseInfo.peripheral != nil)// 已储存设备需要搜索广播到才能执行连接
+        {
+            [smartDevice connectToDevice]; // 连接到设备
+        }
+        else return ; // 已储存设备 未搜索到广播不允许进入详情页面
+    }
+    
+    // 进入详情页面
+    SmartDeviceVC *device_view = [[SmartDeviceVC alloc]init];
+    device_view.smartDevice = smartDevice; // 传递设备信息到设备窗口
+    [self.navigationController pushViewController:device_view animated:YES]; // 跳转到设备窗口
 }
 
 #pragma mark - private method
@@ -370,30 +538,49 @@
     NSString *product_id = [NSString stringWithFormat:@"%02X%02X%02X%02X", pid[0], pid[1], pid[2], pid[3]];
     baseInfo.product_info = self.productInfo[product_id];
     
+    // 设备默认名称
+    uint8_t *dev_id = baseInfo.manufacture_data->device_id;
+    uint8_t capacity = baseInfo.manufacture_data->capacity_value * 0.5 + 1.5; // 计算电池容量
+    baseInfo.name = [NSString stringWithFormat:@"%@ %dAH #%02X%02X", baseInfo.product_info.default_name, capacity, dev_id[0], dev_id[1]];
+    
     // 遍历数组中的蓝牙模型，更新原有的数据
     for (NSInteger i = 0; i < self.smartDevice.count; i++) {
-        CBPeripheral *tempPeripheral = self.smartDevice[i].baseInfo.peripheral;
-        if ([peripheral.identifier.UUIDString isEqualToString:tempPeripheral.identifier.UUIDString]) {
-            [self.smartDevice objectAtIndex:i].baseInfo = baseInfo; // 更新设备基本信息
-            [UIView performWithoutAnimation:^{ // 无动画
-                NSIndexPath *index = [NSIndexPath indexPathForRow:i inSection:0];
-                [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:index] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
-            }];
-            return ;
+        SmartDevice *smartDevice = self.smartDevice[i];
+        CBPeripheral *tempPeripheral = smartDevice.baseInfo.peripheral;
+        if (smartDevice.baseInfo.BLEUUID != nil) // 当前遍历的是储存设备
+        {
+            if ([self.smartDevice[i].baseInfo.BLEUUID isEqualToString:peripheral.identifier.UUIDString]) // 当前搜索到的设备是已储存的设备
+            {
+                if (smartDevice.baseInfo.peripheral == nil || smartDevice.baseInfo.peripheral.state != CBPeripheralStateConnected) // 刚搜索到已储存的设备 或者 未连接
+                {
+                    smartDevice.baseInfo.peripheral = [peripheral copy];
+                    smartDevice.baseInfo.manufacture_data = malloc(sizeof(manufacture_data_t)); // 分配厂商数据内存
+                    memcpy(smartDevice.baseInfo.manufacture_data, manufacturer_data.bytes, sizeof(manufacture_data_t));
+                    smartDevice.delegate = self; // 代理智能设备接口
+                    [smartDevice connectToDevice]; // 连接到设备
+                }
+                return ;
+            }
         }
-    }
-    
-    for (NSInteger i = 0; i < self.smartDevice.count; i ++) {
-        CBPeripheral *tempPeripheral = self.smartDevice[i].baseInfo.peripheral;
-        if ([peripheral.identifier.UUIDString isEqualToString:tempPeripheral.identifier.UUIDString]) {
-            return ; // 已经添加过此设备 无需再次添加
+        else // 当前遍历的是非储存设备
+        {
+            if ([peripheral.identifier.UUIDString isEqualToString:tempPeripheral.identifier.UUIDString]) // 当前搜索到的设备已显示
+            {
+                [self.smartDevice objectAtIndex:i].baseInfo = baseInfo; // 更新设备基本信息
+                [UIView performWithoutAnimation:^{ // 无动画
+                    NSIndexPath *index = [NSIndexPath indexPathForRow:i inSection:0];
+                    [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:index] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
+                }];
+                return ;
+            }
         }
     }
     
     SmartDevice *smartDevice = [[SmartDevice alloc]init]; // 创建智能设备
     smartDevice.baseInfo = baseInfo; // 复制设备基本信息
     [self.smartDevice addObject:smartDevice]; // 添加该设备到数组
-    [self.table insertSections:[NSIndexSet indexSetWithIndex:[self.smartDevice indexOfObject:smartDevice]] withRowAnimation:UITableViewRowAnimationLeft];
+    NSIndexPath *indexPath = [NSIndexPath indexPathForRow:self.smartDevice.count - self.myDevice.count - 1 inSection:self.myDevice.count];
+    [self.table insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationLeft];
 }
 
 @end

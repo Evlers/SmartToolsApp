@@ -26,6 +26,7 @@
     UITabBarController *tb = [[UITabBarController alloc]init];
     tb.tabBar.translucent = NO;
     tb.tabBar.tintColor = [UIColor colorWithHexString:@"FF9040"];
+    tb.tabBar.backgroundColor = [UIColor colorWithWhite:1 alpha:0.8];
     
     // 添加视图控制器到导航栏
     NSArray *arrayVC = [NSArray arrayWithObjects:[[SelectDevice alloc] init], nil];

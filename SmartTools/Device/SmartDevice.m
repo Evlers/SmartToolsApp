@@ -81,10 +81,8 @@
 // 断开与设备连接
 - (void)disconnectToDevice {
     
-    dispatch_block_cancel(self.conTimeoutBlock); // 取消超时任务
+    if (self.baseInfo.state == SmartDeviceBLEDisconnected) return ;
     [self.centralManager cancelPeripheralConnection:self.baseInfo.peripheral]; // 取消设备连接
-    
-    free(self.battery.cellVoltage);
 }
 
 // 设置功能开关
@@ -97,6 +95,20 @@
     else self.battery.functioon_switch &= ~sw;
     uint32_t fun_sw = self.battery.functioon_switch;
     memcpy(body.data, &fun_sw, sizeof(fun_sw));
+    [self.smart_protocol send_frame_with_fcb:FCB_DEFAULT body:&body];
+    free(body.data);
+}
+
+// 发送 PIN Code
+- (void)sendPinCode:(NSInteger)pin_code {
+    protocol_body_t body;
+    body.code = SP_CODE_PIN_CODE;
+    body.len = 4;
+    body.data = malloc(body.len);
+    body.data[0] = pin_code % 10;
+    body.data[1] = pin_code / 10 % 10;
+    body.data[2] = pin_code / 100 / 10 % 10;
+    body.data[2] = pin_code / 1000 / 100 / 10 % 10;
     [self.smart_protocol send_frame_with_fcb:FCB_DEFAULT body:&body];
     free(body.data);
 }
@@ -147,27 +159,31 @@
     [self.smart_protocol send_get_command:SP_CODE_CURRENT_CUR];         // 发送当前电流查询指令
     [self.smart_protocol send_get_command:SP_CODE_CURRENT_PER];         // 发送当前电量查询指令
     [self.smart_protocol send_get_command:SP_CODE_BATTERY_STATUS];      // 发送电池包状态查询指令
+    [self.smart_protocol send_get_command:SP_CODE_READ_OVERCUR_NUM];    // 查询设备过流次数
+    [self.smart_protocol send_get_command:SP_CODE_READ_SHORT_NUM];      // 查询设备短路次数
+    [self.smart_protocol send_get_command:SP_CODE_WORK_TIME];           // 发送工作时间查询指令
+    [self.smart_protocol send_get_command:SP_CODE_CHARGE_TIMES];        // 发送充电次数查询指令
+    [self.smart_protocol send_get_command:SP_CODE_DISCHARGE_TIMES];     // 发送放电次数查询指令
     
     dispatch_block_t block = dispatch_block_create(DISPATCH_BLOCK_BARRIER, ^{
         [self.smart_protocol send_get_command:SP_CODE_MANU_DATE];           // 发送生产日期查询指令
-        [self.smart_protocol send_get_command:SP_CODE_READ_OVERCUR_NUM];    // 查询设备过流次数
-        [self.smart_protocol send_get_command:SP_CODE_READ_SHORT_NUM];      // 查询设备短路次数
-        [self.smart_protocol send_get_command:SP_CODE_WORK_TIME];           // 发送工作时间查询指令
-        [self.smart_protocol send_get_command:SP_CODE_CHARGE_TIMES];        // 发送充电次数查询指令
-        [self.smart_protocol send_get_command:SP_CODE_DISCHARGE_TIMES];     // 发送放电次数查询指令
         [self.smart_protocol send_get_command:SP_CODE_DEV_UUID];            // 发送设备UIUD查询指令
-        // 查询总电压以及每节电池电压
-        for (int i = 0; i < SmartBatCellNumber + 1; i ++) {
-            protocol_body_t body;
-            body.code = SP_CODE_READ_BAT_VOL;
-            body.len = 1;
-            body.data = malloc(body.len);
-            body.data[0] = i;
-            [self.smart_protocol send_frame_with_fcb:FCB_DEFAULT body:&body];
-            free(body.data);
-        }
+        [self getBatteryVoltage]; // 发送电压查询指令 查询所有电池电压
     });
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1000 * NSEC_PER_MSEC), dispatch_get_main_queue(), block);
+}
+
+// 查询电池电压
+- (void)getBatteryVoltage {
+    for (int i = 0; i < SmartBatCellNumber + 1; i ++) { // 查询总电压以及每节电池电压
+        protocol_body_t body;
+        body.code = SP_CODE_READ_BAT_VOL;
+        body.len = 1;
+        body.data = malloc(body.len);
+        body.data[0] = i;
+        [self.smart_protocol send_frame_with_fcb:FCB_DEFAULT body:&body];
+        free(body.data);
+    }
 }
 
 // 更新设备状态
@@ -175,6 +191,10 @@
     self.baseInfo.state = state;
     if (self.delegate && [self.delegate respondsToSelector:@selector(smartDevice:didUpdateState:)])
         [self.delegate smartDevice:self didUpdateState:self.baseInfo.state];
+    if (state == SmartDeviceBLEDisconnected) {
+        [self.centralManager cancelPeripheralConnection:self.baseInfo.peripheral]; // 取消设备连接
+        free(self.battery.cellVoltage);
+    }
 }
 
 #pragma mark -- Smart battery package protocool interface
@@ -381,13 +401,12 @@
         case SP_CODE_MANU_DATE:
             if (body->len == sizeof(uint32_t)) {
                 uint32_t timestamp = dataToU32(body->data);
-                self.battery.dateOfManufacture = [NSDate dateWithTimeIntervalSince1970:timestamp];
+                self.baseInfo.dateOfProduction = [NSDate dateWithTimeIntervalSince1970:timestamp];
                 
                 NSDateFormatter *dateFormatter = [NSDateFormatter new];
-                [dateFormatter setDateFormat:@"yyyy-MM"]; // 格式化时间
-                NSString *dateOfManufacture = [dateFormatter stringFromDate:self.battery.dateOfManufacture];
-                didDataUpdate(@{@"Date of manufacture" : dateOfManufacture});
-                self.battery.paramIsReady |= SmartBatReadyOfDateofManu;
+                [dateFormatter setDateFormat:@"yyyy-MM-dd"]; // 格式化时间
+                NSString *dateOfProduction = [dateFormatter stringFromDate:self.baseInfo.dateOfProduction];
+                didDataUpdate(@{@"Date of manufacture" : dateOfProduction});
             }
             break;
             
@@ -425,6 +444,14 @@
                     self.battery.paramIsReady |= SmartBatReadyOfCellVolt;
                 }
                 
+            }
+            break;
+            
+        case SP_CODE_PIN_CODE:
+            if (body->len == 0) {
+                uint8_t result = body->code & ~0x80;
+                NSString *result_str = (result == 0) ? @"success" : @"failed";
+                didDataUpdate(@{@"PIN Code" : result_str});
             }
             break;
             

@@ -19,6 +19,8 @@
 		9931D5B229A8C9E300D3C947 /* MASConstraintMaker.m in Sources */ = {isa = PBXBuildFile; fileRef = 9931D5A129A8C9E100D3C947 /* MASConstraintMaker.m */; };
 		9931D5B329A8C9E300D3C947 /* MASConstraint.m in Sources */ = {isa = PBXBuildFile; fileRef = 9931D5A329A8C9E100D3C947 /* MASConstraint.m */; };
 		9931D5B429A8C9E300D3C947 /* View+MASAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = 9931D5A629A8C9E200D3C947 /* View+MASAdditions.m */; };
+		9931D5B629B820B300D3C947 /* DeviceInfoVC.m in Sources */ = {isa = PBXBuildFile; fileRef = 9931D5B529B820B000D3C947 /* DeviceInfoVC.m */; };
+		9931D5B829B820FD00D3C947 /* DeviceStatisticsVC.m in Sources */ = {isa = PBXBuildFile; fileRef = 9931D5B729B820FD00D3C947 /* DeviceStatisticsVC.m */; };
 		99394D5E29A34E1E00055CF8 /* DeviceTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 99394D5D29A34E1E00055CF8 /* DeviceTableViewCell.m */; };
 		99442909294FFA320086ACA0 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 99442908294FFA320086ACA0 /* AppDelegate.m */; };
 		99442914294FFA340086ACA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 99442913294FFA340086ACA0 /* Assets.xcassets */; };
@@ -81,6 +83,10 @@
 		9931D5A829A8C9E200D3C947 /* MASCompositeConstraint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MASCompositeConstraint.h; path = Masonry/Masonry/MASCompositeConstraint.h; sourceTree = "<group>"; };
 		9931D5A929A8C9E200D3C947 /* NSArray+MASShorthandAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "NSArray+MASShorthandAdditions.h"; path = "Masonry/Masonry/NSArray+MASShorthandAdditions.h"; sourceTree = "<group>"; };
 		9931D5AA29A8C9E200D3C947 /* MASConstraintMaker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MASConstraintMaker.h; path = Masonry/Masonry/MASConstraintMaker.h; sourceTree = "<group>"; };
+		9931D5B529B820B000D3C947 /* DeviceInfoVC.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = DeviceInfoVC.m; path = ViewController/DeviceInfoVC.m; sourceTree = "<group>"; };
+		9931D5B729B820FD00D3C947 /* DeviceStatisticsVC.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = DeviceStatisticsVC.m; path = ViewController/DeviceStatisticsVC.m; sourceTree = "<group>"; };
+		9931D5BA29B8215300D3C947 /* DeviceStatisticsVC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DeviceStatisticsVC.h; path = ViewController/DeviceStatisticsVC.h; sourceTree = "<group>"; };
+		9931D5BB29B8217200D3C947 /* DeviceInfoVC.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = DeviceInfoVC.h; path = ViewController/DeviceInfoVC.h; sourceTree = "<group>"; };
 		99394D5D29A34E1E00055CF8 /* DeviceTableViewCell.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DeviceTableViewCell.m; sourceTree = "<group>"; };
 		99394D5F29A34E2D00055CF8 /* DeviceTableViewCell.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DeviceTableViewCell.h; sourceTree = "<group>"; };
 		99442904294FFA320086ACA0 /* SmartTools.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartTools.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -216,8 +222,8 @@
 				99618F542995F856005F433B /* ZipArchive */,
 				99C3158A29501210002E8E7E /* ViewController */,
 				99EC438C295AC83B007408C2 /* Device */,
-				99442907294FFA320086ACA0 /* AppDelegate.h */,
 				99442908294FFA320086ACA0 /* AppDelegate.m */,
+				99442907294FFA320086ACA0 /* AppDelegate.h */,
 				99442913294FFA340086ACA0 /* Assets.xcassets */,
 				99442915294FFA340086ACA0 /* LaunchScreen.storyboard */,
 				99442918294FFA340086ACA0 /* Info.plist */,
@@ -306,10 +312,14 @@
 			children = (
 				9931D59129A8C53F00D3C947 /* Masonry */,
 				99394D5829A340ED00055CF8 /* TableViewCell */,
-				991C631529501426002098DE /* SelectDevice.h */,
 				991C631629501426002098DE /* SelectDevice.m */,
-				99EC438B295A8566007408C2 /* SmartDeviceVC.h */,
+				991C631529501426002098DE /* SelectDevice.h */,
 				99EC4388295A80F5007408C2 /* SmartDeviceVC.m */,
+				99EC438B295A8566007408C2 /* SmartDeviceVC.h */,
+				9931D5B529B820B000D3C947 /* DeviceInfoVC.m */,
+				9931D5BB29B8217200D3C947 /* DeviceInfoVC.h */,
+				9931D5B729B820FD00D3C947 /* DeviceStatisticsVC.m */,
+				9931D5BA29B8215300D3C947 /* DeviceStatisticsVC.h */,
 			);
 			name = ViewController;
 			sourceTree = "<group>";
@@ -317,14 +327,14 @@
 		99EC438C295AC83B007408C2 /* Device */ = {
 			isa = PBXGroup;
 			children = (
-				99EC4390295D6DAA007408C2 /* ProtocolStandard.h */,
-				99EC438D295AE562007408C2 /* SmartProtocol.h */,
 				99EC438E295AE598007408C2 /* SmartProtocol.m */,
-				9904CBE4296D9B14007CF40D /* SmartDeviceStandard.h */,
-				9904CBE1296D7440007CF40D /* SmartDevice.h */,
+				99EC438D295AE562007408C2 /* SmartProtocol.h */,
+				99EC4390295D6DAA007408C2 /* ProtocolStandard.h */,
 				9904CBDF296D7429007CF40D /* SmartDevice.m */,
-				99618F8F2999CF13005F433B /* FirmwareFile.h */,
+				9904CBE1296D7440007CF40D /* SmartDevice.h */,
+				9904CBE4296D9B14007CF40D /* SmartDeviceStandard.h */,
 				99618F8D2999CF01005F433B /* FirmwareFile.m */,
+				99618F8F2999CF13005F433B /* FirmwareFile.h */,
 			);
 			path = Device;
 			sourceTree = "<group>";
@@ -409,6 +419,7 @@
 				99618F822995F8DA005F433B /* mz_crypt.c in Sources */,
 				99618F7B2995F8DA005F433B /* mz_zip.c in Sources */,
 				99EC438F295AE598007408C2 /* SmartProtocol.m in Sources */,
+				9931D5B829B820FD00D3C947 /* DeviceStatisticsVC.m in Sources */,
 				991C631729501426002098DE /* SelectDevice.m in Sources */,
 				99618F792995F8DA005F433B /* mz_compat.c in Sources */,
 				9931D5AC29A8C9E300D3C947 /* MASViewConstraint.m in Sources */,
@@ -417,6 +428,7 @@
 				9931D5AE29A8C9E300D3C947 /* MASLayoutConstraint.m in Sources */,
 				99618F8E2999CF01005F433B /* FirmwareFile.m in Sources */,
 				99442909294FFA320086ACA0 /* AppDelegate.m in Sources */,
+				9931D5B629B820B300D3C947 /* DeviceInfoVC.m in Sources */,
 				99618F752995F8DA005F433B /* mz_zip_rw.c in Sources */,
 				99618F762995F8DA005F433B /* mz_strm_os_posix.c in Sources */,
 				99618F7C2995F8DA005F433B /* mz_strm_pkcrypt.c in Sources */,
@@ -600,7 +612,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = LGTSmartTools;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -630,7 +642,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = LGTSmartTools;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
