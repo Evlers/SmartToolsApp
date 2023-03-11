@@ -69,6 +69,10 @@
     FirmwareFile *file;
     NSDictionary *root, *manifest;
     
+    // 删除文件夹中解压前的文件
+    NSFileManager *fileManage = [NSFileManager defaultManager];
+    [fileManage removeItemAtPath:folderPath error:nil];
+    
     if (![SSZipArchive unzipFileAtPath:filePath toDestination:folderPath]) { // 解压该文件到caches中的firmwareFile目录
         NSLog(@"Zip file decompress failed !");
         return nil;
@@ -81,12 +85,13 @@
         if ([info.name isEqualToString:@"manifest.json"]) { // 检查清单(Json文件)
             NSFileHandle *file = [NSFileHandle fileHandleForReadingAtPath:info.path]; // 打开Json文件
             manifest_data = [file readDataToEndOfFile]; // 读取文件数据
-            if (manifest_data == nil) {
-                NSLog(@"The manifest object does not exist");
-                return nil;
-            }
             break;
         }
+    }
+    
+    if (manifest_data == nil) {
+        NSLog(@"The manifest object does not exist");
+        return nil;
     }
     
     // JSON 数据解析

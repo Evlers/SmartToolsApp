@@ -35,6 +35,30 @@
     return fileInfo;
 }
 
+// 读取文件夹中的所有文件信息(不创建数组)
++ (BOOL)readAllFile:(NSMutableArray<FileInfo *> *)fileInfo inFolder:(NSString *)folderPath {
+
+    NSFileManager *manager = [NSFileManager defaultManager]; // 文件管理器
+    if (![manager fileExistsAtPath:folderPath]) return false; // 检查目录是否存在
+    
+    NSEnumerator *childFilesEnumerator = [[manager subpathsAtPath:folderPath] objectEnumerator]; // 从前向后枚举器
+    
+    NSString *fileName = nil;
+    while ((fileName = [childFilesEnumerator nextObject]) != nil) { // 使用枚举器,遍历所有文件
+        NSDictionary *fileAttributes = [manager attributesOfItemAtPath:[folderPath stringByAppendingPathComponent:fileName] error:nil];
+        
+        FileInfo *file_info = [FileInfo alloc];
+        file_info.name = fileName; // 文件名
+        file_info.date = [fileAttributes objectForKey:@"NSFileCreationDate"]; // 文件创建日期
+        file_info.size = [[fileAttributes objectForKey:@"NSFileSize"] integerValue]; // 文件大小
+        file_info.owner = [fileAttributes objectForKey:@"NSFileGroupOwnerAccountName"]; // 所有权用户
+        file_info.path = [folderPath stringByAppendingPathComponent:fileName]; // 文件完整路径
+        
+        [fileInfo addObject:file_info]; // 添加到所有文件可变数组中
+    }
+    return true;
+}
+
 @end
 
 

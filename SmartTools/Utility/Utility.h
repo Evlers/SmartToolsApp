@@ -23,6 +23,7 @@
 @property (nonatomic, strong) NSString  *path;
 
 + (NSMutableArray<FileInfo *> *)readAllFileInfoInFolder:(NSString *)folderPath;
++ (BOOL)readAllFile:(NSMutableArray<FileInfo *> *)fileInfo inFolder:(NSString *)folderPath;
 
 @end
 

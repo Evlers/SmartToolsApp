@@ -22,6 +22,7 @@
 		9931D5B629B820B300D3C947 /* DeviceInfoVC.m in Sources */ = {isa = PBXBuildFile; fileRef = 9931D5B529B820B000D3C947 /* DeviceInfoVC.m */; };
 		9931D5B829B820FD00D3C947 /* DeviceStatisticsVC.m in Sources */ = {isa = PBXBuildFile; fileRef = 9931D5B729B820FD00D3C947 /* DeviceStatisticsVC.m */; };
 		99394D5E29A34E1E00055CF8 /* DeviceTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 99394D5D29A34E1E00055CF8 /* DeviceTableViewCell.m */; };
+		99432A0D29BC36470084C419 /* FirmwareFile in Resources */ = {isa = PBXBuildFile; fileRef = 99432A0C29BC36470084C419 /* FirmwareFile */; };
 		99442909294FFA320086ACA0 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 99442908294FFA320086ACA0 /* AppDelegate.m */; };
 		99442914294FFA340086ACA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 99442913294FFA340086ACA0 /* Assets.xcassets */; };
 		99442917294FFA340086ACA0 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 99442915294FFA340086ACA0 /* LaunchScreen.storyboard */; };
@@ -89,6 +90,7 @@
 		9931D5BB29B8217200D3C947 /* DeviceInfoVC.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = DeviceInfoVC.h; path = ViewController/DeviceInfoVC.h; sourceTree = "<group>"; };
 		99394D5D29A34E1E00055CF8 /* DeviceTableViewCell.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DeviceTableViewCell.m; sourceTree = "<group>"; };
 		99394D5F29A34E2D00055CF8 /* DeviceTableViewCell.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DeviceTableViewCell.h; sourceTree = "<group>"; };
+		99432A0C29BC36470084C419 /* FirmwareFile */ = {isa = PBXFileReference; lastKnownFileType = folder; path = FirmwareFile; sourceTree = "<group>"; };
 		99442904294FFA320086ACA0 /* SmartTools.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartTools.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		99442907294FFA320086ACA0 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		99442908294FFA320086ACA0 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -327,6 +329,7 @@
 		99EC438C295AC83B007408C2 /* Device */ = {
 			isa = PBXGroup;
 			children = (
+				99432A0C29BC36470084C419 /* FirmwareFile */,
 				99EC438E295AE598007408C2 /* SmartProtocol.m */,
 				99EC438D295AE562007408C2 /* SmartProtocol.h */,
 				99EC4390295D6DAA007408C2 /* ProtocolStandard.h */,
@@ -397,6 +400,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				99442917294FFA340086ACA0 /* LaunchScreen.storyboard in Resources */,
+				99432A0D29BC36470084C419 /* FirmwareFile in Resources */,
 				99442914294FFA340086ACA0 /* Assets.xcassets in Resources */,
 				99618F842995F8EA005F433B /* include in Resources */,
 			);
@@ -596,7 +600,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = VPM279C5JQ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SmartTools/Info.plist;
@@ -612,7 +616,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = LGTSmartTools;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -626,7 +630,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = VPM279C5JQ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SmartTools/Info.plist;
@@ -642,7 +646,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = LGTSmartTools;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

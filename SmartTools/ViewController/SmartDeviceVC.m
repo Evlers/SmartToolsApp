@@ -87,9 +87,15 @@
     [self conofigTableViewItem]; // 配置列表显示项目
     [self settingCellValue]; // 设置列表显示的值
     
+    // 生成资源文件夹路径以及Inbox路径
+    NSString* firmwarePath = [[NSBundle mainBundle] resourcePath]; // 获取资源路径
+    firmwarePath = [firmwarePath stringByAppendingString:@"/FirmwareFile"]; // 获取资源文件中的固件文件夹路径(蓝色文件夹)
+    NSString *inboxPath = [NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/Inbox/"]]; // 获取Inbox文件夹路径
+    
     // 读取所有文件
-    NSString *inboxPath = [NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Documents/Inbox/"]]; // 总文件夹
-    self.allFileInfo = [FileInfo readAllFileInfoInFolder:inboxPath]; // 读取该文件夹下的所有文件信息
+    self.allFileInfo = [NSMutableArray array];
+    [FileInfo readAllFile:self.allFileInfo inFolder:inboxPath]; // 读取Inbox文件夹下的所有文件信息
+    [FileInfo readAllFile:self.allFileInfo inFolder:firmwarePath]; // 读取资源中固件文件夹下的所有文件信息
     
     [self batteryEventHandler]; // 检查是否有事件需要提示
 }
