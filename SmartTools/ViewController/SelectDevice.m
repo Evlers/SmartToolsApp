@@ -87,7 +87,13 @@
     self.table = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, 0, 0) style:UITableViewStyleGrouped];
     self.table.delegate = self;              // 设置代理
     self.table.dataSource = self;            // 设置数据源
-    self.table.estimatedRowHeight = UITableViewAutomaticDimension;
+    self.table.estimatedRowHeight = 100.f;
+    self.table.rowHeight = UITableViewAutomaticDimension;
+    self.table.estimatedSectionHeaderHeight = 60.f;
+    self.table.sectionHeaderHeight = UITableViewAutomaticDimension;
+    self.table.estimatedSectionFooterHeight = 0.f;
+    self.table.sectionFooterHeight = 0.f;
+    
     self.table.backgroundColor = [UIColor clearColor];
     self.table.separatorStyle = UITableViewCellSeparatorStyleNone; // 每行之间无分割线
     [self.view addSubview:self.table];
@@ -199,13 +205,6 @@
     if (self.myDevice.count == 0 && self.smartDevice.count == 0)
         return 1; // 至少有一个组 用于插入搜索到的设备
     return self.myDevice.count + (self.smartDevice.count ? 1 : 0);
-}
-
-// 组头高度
--(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
-    if (section == 0) return 60;
-    else if (section == self.myDevice.count) return 30;
-    return 1;
 }
 
 // Tableview接口: 返回行数
@@ -487,12 +486,8 @@
 
 - (void)smartDeviceInfoUpdate:(SmartDevice *)device {
     [UIView performWithoutAnimation:^{ // 无动画
-        [self.table performBatchUpdates:^{
-            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:[self.smartDevice indexOfObject:device]];
-            [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
-        } completion:^(BOOL finished) {
-            [UIView setAnimationsEnabled:YES];
-        }];
+        NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:[self.smartDevice indexOfObject:device]];
+        [self.table reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationNone]; // 通知 TableView 刷新
     }];
 }
 
